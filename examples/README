@@ -1,0 +1,4 @@
+# Examples
+
+## Running the examples
+Run `elm-reactor` in the root of the project (*not* in the examples folder) and navigate to `examples/index.html` in the browser

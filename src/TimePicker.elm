@@ -14,6 +14,9 @@ module TimePicker exposing (Time, Period, TimePicker, Settings, Msg, defaultSett
 -}
 
 import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
+import Json.Decode
 
 
 {-| The base model for the time picker
@@ -30,6 +33,7 @@ type Period
 
 
 {-| The base way to represent time
+ Note: Hours are counted from midnight at 0
 -}
 type alias Time =
     { hours : Int
@@ -45,6 +49,7 @@ type alias Settings =
     { showMinutes : Bool
     , showSeconds : Bool
     , formatWith24Hours : Bool
+    , placeholder : String
     }
 
 
@@ -57,7 +62,14 @@ type alias Model =
 {-| The internal messages that the picker uses to operate
 -}
 type Msg
-    = NoOp
+    = Clear
+    | Focus
+    | Blur
+    | SelectHour Int
+    | SelectMinute Int
+    | SelectSecond Int
+    | SelectPeriod Period
+    | NoOp
 
 
 {-| The basic configuration for a TimePicker
@@ -67,6 +79,7 @@ defaultSettings =
     { showMinutes = True
     , showSeconds = True
     , formatWith24Hours = False
+    , placeholder = "Select time"
     }
 
 
@@ -74,18 +87,146 @@ defaultSettings =
 -}
 init : Maybe Time -> TimePicker
 init initialValue =
-    TimePicker (Model False initialValue)
+    TimePicker
+        { open = False
+        , value = Nothing
+        }
+
+
+defaultTime : Time
+defaultTime =
+    { hours = 0
+    , minutes = 0
+    , seconds = 0
+    , period = AM
+    }
 
 
 {-| Function to update the model when messages come
 -}
 update : Settings -> Msg -> TimePicker -> TimePicker
-update settings msg (TimePicker model) =
-    TimePicker model
+update settings msg (TimePicker ({ value } as model)) =
+    case msg of
+        Clear ->
+            TimePicker { model | open = False, value = Nothing }
+
+        Focus ->
+            TimePicker { model | open = True }
+
+        Blur ->
+            TimePicker { model | open = False }
+
+        SelectHour hours ->
+            let
+                timeToUpdate =
+                    Maybe.withDefault defaultTime value
+            in
+                TimePicker { model | value = Just { timeToUpdate | hours = hours } }
+
+        SelectMinute minutes ->
+            let
+                timeToUpdate =
+                    Maybe.withDefault defaultTime value
+            in
+                TimePicker { model | value = Just { timeToUpdate | minutes = minutes } }
+
+        SelectSecond seconds ->
+            let
+                timeToUpdate =
+                    Maybe.withDefault defaultTime value
+            in
+                TimePicker { model | value = Just { timeToUpdate | seconds = seconds } }
+
+        SelectPeriod period ->
+            let
+                timeToUpdate =
+                    Maybe.withDefault defaultTime value
+            in
+                TimePicker { model | value = Just { timeToUpdate | period = period } }
+
+        NoOp ->
+            TimePicker model
+
+
+cssPrefix : String
+cssPrefix =
+    "elm-time-picker-"
 
 
 {-| Function for viewing the time picker
 -}
 view : Settings -> TimePicker -> Html Msg
 view settings (TimePicker model) =
-    div [] []
+    let
+        hours =
+            List.range 0 11
+
+        minutes =
+            List.range 0 59
+
+        seconds =
+            List.range 0 59
+
+        paddedFormatter value =
+            if value < 10 then
+                "0" ++ toString value
+            else
+                toString value
+
+        hourFormatter value =
+            if value == 0 then
+                "12"
+            else
+                toString value
+
+        toOption : (a -> String) -> (Time -> a) -> (a -> Msg) -> a -> Html Msg
+        toOption formatter accessor toMsg value =
+            let
+                isSelected =
+                    Maybe.map accessor model.value == Just value
+            in
+                li [ onClick (toMsg value), classList [ ( "elm-time-picker-panel-select-option-selected", isSelected ) ] ]
+                    [ text (formatter value) ]
+
+        onPicker ev =
+            Json.Decode.succeed
+                >> onWithOptions ev
+                    { preventDefault = True
+                    , stopPropagation = True
+                    }
+
+        optionsDisplay =
+            if model.open then
+                [ div [ class (cssPrefix ++ "panel-combobox"), onPicker "mousedown" NoOp, onPicker "mouseup" NoOp ]
+                    [ div [ class (cssPrefix ++ "panel-select") ]
+                        [ ul [] (List.map (toOption hourFormatter .hours SelectHour) hours) ]
+                    , div [ class (cssPrefix ++ "panel-select") ]
+                        [ ul [] (List.map (toOption paddedFormatter .minutes SelectMinute) minutes) ]
+                    , div [ class (cssPrefix ++ "panel-select") ]
+                        [ ul [] (List.map (toOption paddedFormatter .seconds SelectSecond) seconds) ]
+                    , div [ class (cssPrefix ++ "panel-select") ]
+                        [ ul []
+                            [ toOption toString .period SelectPeriod AM
+                            , toOption toString .period SelectPeriod PM
+                            ]
+                        ]
+                    ]
+                ]
+            else
+                []
+
+        formatValueDisplay time =
+            hourFormatter time.hours ++ ":" ++ paddedFormatter time.minutes ++ ":" ++ paddedFormatter time.seconds ++ " " ++ toString time.period
+
+        inputValue =
+            model.value
+                |> Maybe.map (formatValueDisplay >> Html.Attributes.value >> List.singleton)
+                |> Maybe.withDefault []
+    in
+        div [ class (cssPrefix ++ "container") ] <|
+            [ div [ class (cssPrefix ++ "input-container") ]
+                [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder ] ++ inputValue) []
+                , a [ class (cssPrefix ++ "panel-clear-btn"), href "javascript:void(0);", onClick Clear ] []
+                ]
+            ]
+                ++ optionsDisplay
