@@ -48,8 +48,12 @@ type alias Time =
 type alias Settings =
     { showMinutes : Bool
     , showSeconds : Bool
-    , formatWith24Hours : Bool
+    , use24Hours : Bool
     , placeholder : String
+    , hourStep : Int
+    , minuteStep : Int
+    , secondStep : Int
+    , disabled : Bool
     }
 
 
@@ -78,8 +82,12 @@ defaultSettings : Settings
 defaultSettings =
     { showMinutes = True
     , showSeconds = True
-    , formatWith24Hours = False
+    , use24Hours = False
     , placeholder = "Select time"
+    , hourStep = 1
+    , minuteStep = 1
+    , secondStep = 1
+    , disabled = False
     }
 
 
@@ -158,14 +166,18 @@ cssPrefix =
 view : Settings -> TimePicker -> Html Msg
 view settings (TimePicker model) =
     let
+        steppingRange step maxVal =
+            List.range 0 (maxVal // step)
+                |> List.map (\val -> val * step)
+
         hours =
-            List.range 0 11
+            steppingRange settings.hourStep 11
 
         minutes =
-            List.range 0 59
+            steppingRange settings.minuteStep 59
 
         seconds =
-            List.range 0 59
+            steppingRange settings.secondStep 59
 
         paddedFormatter value =
             if value < 10 then
@@ -196,7 +208,7 @@ view settings (TimePicker model) =
                     }
 
         optionsDisplay =
-            if model.open then
+            if model.open && not settings.disabled then
                 [ div [ class (cssPrefix ++ "panel-combobox"), onPicker "mousedown" NoOp, onPicker "mouseup" NoOp ]
                     [ div [ class (cssPrefix ++ "panel-select") ]
                         [ ul [] (List.map (toOption hourFormatter .hours SelectHour) hours) ]
@@ -230,7 +242,7 @@ view settings (TimePicker model) =
     in
         div [ class (cssPrefix ++ "container") ] <|
             [ div [ class (cssPrefix ++ "input-container") ] <|
-                [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder ] ++ inputValue) [] ]
+                [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder, readonly True, disabled settings.disabled ] ++ inputValue) [] ]
                     ++ clearButton
             ]
                 ++ optionsDisplay

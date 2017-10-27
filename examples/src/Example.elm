@@ -5,38 +5,60 @@ import TimePicker exposing (TimePicker)
 
 
 type Msg
-    = TimePickerMsg TimePicker.Msg
+    = DefaultTimePickerMsg TimePicker.Msg
+    | SteppingTimePickerMsg TimePicker.Msg
 
 
 type alias Model =
-    { timePicker : TimePicker
+    { defaultTimePicker : TimePicker
+    , steppingTimePicker : TimePicker
     }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model (TimePicker.init Nothing), Cmd.none )
+    ( Model (TimePicker.init Nothing) (TimePicker.init Nothing), Cmd.none )
+
+
+steppingSettings : TimePicker.Settings
+steppingSettings =
+    let
+        defaultSettings =
+            TimePicker.defaultSettings
+    in
+        { defaultSettings | showSeconds = False, minuteStep = 15 }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        TimePickerMsg msg ->
+        DefaultTimePickerMsg msg ->
             let
                 updatedPicker =
-                    TimePicker.update TimePicker.defaultSettings msg model.timePicker
+                    TimePicker.update TimePicker.defaultSettings msg model.defaultTimePicker
             in
-                ( Model updatedPicker, Cmd.none )
+                ( { model | defaultTimePicker = updatedPicker }, Cmd.none )
+
+        SteppingTimePickerMsg msg ->
+            let
+                updatedPicker =
+                    TimePicker.update steppingSettings msg model.steppingTimePicker
+            in
+                ( { model | steppingTimePicker = updatedPicker }, Cmd.none )
 
 
 view : Model -> Html Msg
-view { timePicker } =
+view { defaultTimePicker, steppingTimePicker } =
     div []
         [ div []
             [ h1 []
                 [ text "Time Picker with defaults" ]
             , div []
-                [ Html.map TimePickerMsg <| TimePicker.view TimePicker.defaultSettings timePicker ]
+                [ Html.map DefaultTimePickerMsg <| TimePicker.view TimePicker.defaultSettings defaultTimePicker ]
+            , h1 []
+                [ text "Time Picker without seconds and a minute step size of 15" ]
+            , div []
+                [ Html.map SteppingTimePickerMsg <| TimePicker.view steppingSettings steppingTimePicker ]
             ]
         ]
 
