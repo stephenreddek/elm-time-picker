@@ -226,7 +226,7 @@ view settings (TimePicker model) =
         div [ class (cssPrefix ++ "container") ] <|
             [ div [ class (cssPrefix ++ "input-container") ]
                 [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder ] ++ inputValue) []
-                , a [ class (cssPrefix ++ "panel-clear-btn"), href "javascript:void(0);", onClick Clear ] []
+                , a [ class (cssPrefix ++ "panel-clear-btn"), href "javascript:void(0);", onPicker "mousedown" NoOp, onPicker "mouseup" NoOp, onClick Clear ] []
                 ]
             ]
                 ++ optionsDisplay
