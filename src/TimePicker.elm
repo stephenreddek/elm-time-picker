@@ -1,9 +1,9 @@
-module TimePicker exposing (Time, Period, TimePicker, Settings, Msg, init, update, view)
+module TimePicker exposing (Time, Period, TimePicker, Settings, Msg, defaultSettings, init, update, view)
 
 {-| A time picker in pure elm.
 
 # Models
-@docs Time, Period, TimePicker, Settings
+@docs Time, Period, TimePicker, Settings, defaultSettings
 
 # Update
 @docs Msg, init, update
@@ -58,6 +58,16 @@ type alias Model =
 -}
 type Msg
     = NoOp
+
+
+{-| The basic configuration for a TimePicker
+-}
+defaultSettings : Settings
+defaultSettings =
+    { showMinutes = True
+    , showSeconds = True
+    , formatWith24Hours = False
+    }
 
 
 {-| Function for initializing a closed and empty TimePicker
