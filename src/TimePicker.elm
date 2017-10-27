@@ -222,11 +222,15 @@ view settings (TimePicker model) =
             model.value
                 |> Maybe.map (formatValueDisplay >> Html.Attributes.value >> List.singleton)
                 |> Maybe.withDefault []
+
+        clearButton =
+            model.value
+                |> Maybe.map (\_ -> [ a [ class (cssPrefix ++ "panel-clear-btn"), href "javascript:void(0);", onPicker "mousedown" NoOp, onPicker "mouseup" NoOp, onClick Clear ] [] ])
+                |> Maybe.withDefault []
     in
         div [ class (cssPrefix ++ "container") ] <|
-            [ div [ class (cssPrefix ++ "input-container") ]
-                [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder ] ++ inputValue) []
-                , a [ class (cssPrefix ++ "panel-clear-btn"), href "javascript:void(0);", onPicker "mousedown" NoOp, onPicker "mouseup" NoOp, onClick Clear ] []
-                ]
+            [ div [ class (cssPrefix ++ "input-container") ] <|
+                [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder ] ++ inputValue) [] ]
+                    ++ clearButton
             ]
                 ++ optionsDisplay
