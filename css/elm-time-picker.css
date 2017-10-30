@@ -1,6 +1,19 @@
+.elm-time-picker-container {
+    position: relative;
+}
+
+.elm-time-picker-container:before {
+    display: block;
+    width: 137px;
+    height: 31px;
+    content: '';
+}
+
 .elm-time-picker-inner-container {
     display: inline-block;
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
     outline: none;
     list-style: none;
     font-size: 12px;
@@ -12,7 +25,10 @@
     line-height: 1.5;
     overflow: hidden;
     left: -2px;
-    z-index: 1050;    
+}
+
+.elm-time-picker-active .elm-time-picker-inner-container {
+    z-index: 1050;
 }
 
 .elm-time-picker-input-container {
@@ -65,7 +81,6 @@
     display: table;
     box-sizing: border-box;
 }
-
 
 .elm-time-picker-panel-select {
     float: left;

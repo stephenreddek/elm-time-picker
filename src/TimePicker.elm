@@ -331,7 +331,7 @@ view settings (TimePicker model) =
                 |> Maybe.map (\_ -> [ a [ class (cssPrefix ++ "panel-clear-btn"), href "javascript:void(0);", onPicker "mousedown" NoOp, onPicker "mouseup" NoOp, onClick Clear ] [] ])
                 |> Maybe.withDefault []
     in
-        div [ class (cssPrefix ++ "container") ]
+        div [ classList [ ( cssPrefix ++ "container", True ), ( cssPrefix ++ "active", model.open ) ] ]
             [ div [ class (cssPrefix ++ "inner-container") ] <|
                 [ div [ class (cssPrefix ++ "input-container") ] <|
                     [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder, readonly True, disabled settings.disabled ] ++ inputValue) [] ]
