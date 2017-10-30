@@ -160,15 +160,18 @@ update settings msg (TimePicker ({ value } as model)) =
                 timeToUpdate =
                     Maybe.withDefault defaultTime value
             in
-                if period == AM then
-                    if timeToUpdate.hours >= 12 then
-                        TimePicker { model | value = Just { timeToUpdate | hours = timeToUpdate.hours - 12 } }
-                    else
-                        TimePicker { model | value = Just timeToUpdate }
-                else if timeToUpdate.hours >= 12 then
-                    TimePicker { model | value = Just timeToUpdate }
-                else
-                    TimePicker { model | value = Just { timeToUpdate | hours = timeToUpdate.hours + 12 } }
+                case period of
+                    AM ->
+                        if timeToUpdate.hours >= 12 then
+                            TimePicker { model | value = Just { timeToUpdate | hours = timeToUpdate.hours - 12 } }
+                        else
+                            TimePicker { model | value = Just timeToUpdate }
+
+                    PM ->
+                        if timeToUpdate.hours >= 12 then
+                            TimePicker { model | value = Just timeToUpdate }
+                        else
+                            TimePicker { model | value = Just { timeToUpdate | hours = timeToUpdate.hours + 12 } }
 
         NoOp ->
             TimePicker model
@@ -179,51 +182,87 @@ cssPrefix =
     "elm-time-picker-"
 
 
+onWithoutLosingFocus : String -> Msg -> Html.Attribute Msg
+onWithoutLosingFocus eventName =
+    Json.Decode.succeed
+        >> onWithOptions eventName
+            { preventDefault = True
+            , stopPropagation = True
+            }
+
+
 {-| Function for viewing the time picker
 -}
 view : Settings -> TimePicker -> Html Msg
 view settings (TimePicker model) =
     let
-        steppingRange step maxVal =
-            List.range 0 (maxVal // step)
-                |> List.map (\val -> val * step)
-
-        maxHours =
-            if settings.use24Hours then
-                23
+        optionsDisplay =
+            if model.open && not settings.disabled then
+                [ viewDropDown settings model ]
             else
-                11
+                []
 
-        hours =
-            if not settings.use24Hours && isInPM then
-                maxHours
-                    |> steppingRange settings.hourStep
-                    |> List.map ((+) 12)
+        inputValue =
+            model.value
+                |> Maybe.map (formatValue settings >> Html.Attributes.value >> List.singleton)
+                |> Maybe.withDefault []
+
+        clearButton =
+            model.value
+                |> Maybe.map (\_ -> [ a [ class (cssPrefix ++ "panel-clear-btn"), href "javascript:void(0);", onWithoutLosingFocus "mousedown" NoOp, onWithoutLosingFocus "mouseup" NoOp, onClick Clear ] [] ])
+                |> Maybe.withDefault []
+    in
+        div [ classList [ ( cssPrefix ++ "container", True ), ( cssPrefix ++ "active", model.open ) ] ]
+            [ div [ class (cssPrefix ++ "inner-container") ] <|
+                [ div [ class (cssPrefix ++ "input-container") ] <|
+                    [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder, readonly True, disabled settings.disabled ] ++ inputValue) [] ]
+                        ++ clearButton
+                ]
+                    ++ optionsDisplay
+            ]
+
+
+formatValue : Settings -> Time -> String
+formatValue settings time =
+    let
+        hoursDisplay time =
+            if settings.showHours then
+                [ hourFormatter settings time.hours ]
             else
-                steppingRange settings.hourStep maxHours
+                []
 
-        minutes =
-            steppingRange settings.minuteStep 59
-
-        seconds =
-            steppingRange settings.secondStep 59
-
-        paddedFormatter value =
-            if value < 10 then
-                "0" ++ toString value
+        minutesDisplay time =
+            if settings.showMinutes then
+                [ paddedFormatter time.minutes ]
             else
-                toString value
+                []
 
-        hourFormatter value =
-            if settings.use24Hours then
-                paddedFormatter value
-            else if value == 0 then
-                "12"
-            else if value > 12 then
-                toString (value - 12)
+        secondsDisplay time =
+            if settings.showSeconds then
+                [ paddedFormatter time.seconds ]
             else
-                toString value
+                []
 
+        timePartsDisplay time =
+            [ hoursDisplay time, minutesDisplay time, secondsDisplay time ]
+                |> List.concat
+                |> String.join ":"
+
+        periodDisplay time =
+            if settings.showHours && not settings.use24Hours then
+                if isInAM (Just time) then
+                    " AM"
+                else
+                    " PM"
+            else
+                ""
+    in
+        timePartsDisplay time ++ periodDisplay time
+
+
+viewDropDown : Settings -> Model -> Html Msg
+viewDropDown settings model =
+    let
         selectionOption : String -> Bool -> Bool -> Msg -> Html Msg
         selectionOption valueText isSelected isDisabled msg =
             let
@@ -244,12 +283,23 @@ view settings (TimePicker model) =
             in
                 selectionOption (formatter value) isSelected (isDisabledValue value) (toMsg value)
 
-        onPicker ev =
-            Json.Decode.succeed
-                >> onWithOptions ev
-                    { preventDefault = True
-                    , stopPropagation = True
-                    }
+        steppingRange step minVal maxVal =
+            List.range minVal (maxVal // step)
+                |> List.map (\val -> val * step)
+
+        hours =
+            if settings.use24Hours then
+                steppingRange settings.hourStep 0 23
+            else if isInPM model.value then
+                steppingRange settings.hourStep 12 23
+            else
+                steppingRange settings.hourStep 0 11
+
+        minutes =
+            steppingRange settings.minuteStep 0 59
+
+        seconds =
+            steppingRange settings.secondStep 0 59
 
         hourOptions =
             if settings.showHours then
@@ -257,7 +307,7 @@ view settings (TimePicker model) =
                     [ ul []
                         (hours
                             |> List.filter (\hour -> not settings.hideDisabledOptions || not (settings.isHourDisabled hour))
-                            |> List.map (toOption hourFormatter .hours settings.isHourDisabled SelectHour)
+                            |> List.map (toOption (hourFormatter settings) .hours settings.isHourDisabled SelectHour)
                         )
                     ]
                 ]
@@ -290,97 +340,69 @@ view settings (TimePicker model) =
             else
                 []
 
-        isInAM =
-            Maybe.map (.hours >> (\hours -> hours < 12)) model.value
-                |> Maybe.withDefault False
-
-        isInPM =
-            model.value
-                |> Maybe.map (.hours >> (\hours -> hours >= 12))
-                |> Maybe.withDefault False
-
-        amSelectOption =
-            if not settings.hideDisabledOptions || not (settings.isPeriodDisabled AM) then
-                [ selectionOption "AM" isInAM (settings.isPeriodDisabled AM) (SelectPeriod AM) ]
+        periodSelectionOption period =
+            if not settings.hideDisabledOptions || not (settings.isPeriodDisabled period) then
+                [ selectionOption (toString period) (isInPeriod period model) (settings.isPeriodDisabled period) (SelectPeriod period) ]
             else
                 []
 
-        pmSelectOption =
-            if not settings.hideDisabledOptions || not (settings.isPeriodDisabled PM) then
-                [ selectionOption "PM" isInPM (settings.isPeriodDisabled PM) (SelectPeriod PM) ]
-            else
-                []
-
-        showPeriodOptions =
+        periodOptions =
             if not settings.use24Hours && settings.showHours then
                 [ div [ class (cssPrefix ++ "panel-select") ]
-                    [ ul [] (amSelectOption ++ pmSelectOption)
+                    [ ul [] <|
+                        periodSelectionOption AM
+                            ++ periodSelectionOption PM
                     ]
                 ]
             else
                 []
-
-        optionsDisplay =
-            if model.open && not settings.disabled then
-                [ div [ class (cssPrefix ++ "panel-combobox"), onPicker "mousedown" NoOp, onPicker "mouseup" NoOp ] <|
-                    hourOptions
-                        ++ minuteOptions
-                        ++ secondOptions
-                        ++ showPeriodOptions
-                ]
-            else
-                []
-
-        hoursDisplay time =
-            if settings.showHours then
-                [ hourFormatter time.hours ]
-            else
-                []
-
-        minutesDisplay time =
-            if settings.showMinutes then
-                [ paddedFormatter time.minutes ]
-            else
-                []
-
-        secondsDisplay time =
-            if settings.showSeconds then
-                [ paddedFormatter time.seconds ]
-            else
-                []
-
-        periodDisplay time =
-            if settings.showHours && not settings.use24Hours then
-                if isInAM then
-                    " AM"
-                else
-                    " PM"
-            else
-                ""
-
-        timePartsDisplay time =
-            [ hoursDisplay time, minutesDisplay time, secondsDisplay time ]
-                |> List.concat
-                |> String.join ":"
-
-        formatValueDisplay time =
-            timePartsDisplay time ++ periodDisplay time
-
-        inputValue =
-            model.value
-                |> Maybe.map (formatValueDisplay >> Html.Attributes.value >> List.singleton)
-                |> Maybe.withDefault []
-
-        clearButton =
-            model.value
-                |> Maybe.map (\_ -> [ a [ class (cssPrefix ++ "panel-clear-btn"), href "javascript:void(0);", onPicker "mousedown" NoOp, onPicker "mouseup" NoOp, onClick Clear ] [] ])
-                |> Maybe.withDefault []
     in
-        div [ classList [ ( cssPrefix ++ "container", True ), ( cssPrefix ++ "active", model.open ) ] ]
-            [ div [ class (cssPrefix ++ "inner-container") ] <|
-                [ div [ class (cssPrefix ++ "input-container") ] <|
-                    [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder, readonly True, disabled settings.disabled ] ++ inputValue) [] ]
-                        ++ clearButton
-                ]
-                    ++ optionsDisplay
-            ]
+        div [ class (cssPrefix ++ "panel-combobox"), onWithoutLosingFocus "mousedown" NoOp, onWithoutLosingFocus "mouseup" NoOp ] <|
+            hourOptions
+                ++ minuteOptions
+                ++ secondOptions
+                ++ periodOptions
+
+
+paddedFormatter : Int -> String
+paddedFormatter value =
+    if value < 10 then
+        "0" ++ toString value
+    else
+        toString value
+
+
+hourFormatter : Settings -> Int -> String
+hourFormatter settings value =
+    if settings.use24Hours then
+        paddedFormatter value
+    else if value == 0 then
+        "12"
+    else if value > 12 then
+        toString (value - 12)
+    else
+        toString value
+
+
+isInAM : Maybe Time -> Bool
+isInAM value =
+    value
+        |> Maybe.map (.hours >> (\hours -> hours < 12))
+        |> Maybe.withDefault False
+
+
+isInPM : Maybe Time -> Bool
+isInPM value =
+    value
+        |> Maybe.map (.hours >> (\hours -> hours >= 12))
+        |> Maybe.withDefault False
+
+
+isInPeriod : Period -> Model -> Bool
+isInPeriod period model =
+    case period of
+        AM ->
+            isInAM model.value
+
+        PM ->
+            isInPM model.value
