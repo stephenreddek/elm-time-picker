@@ -1,9 +1,9 @@
-module TimePicker exposing (Time, Period, TimePicker, Settings, Msg, defaultSettings, init, update, view)
+module TimePicker exposing (Time, TimePicker, Settings, Msg, defaultSettings, init, update, view)
 
 {-| A time picker in pure elm.
 
 # Models
-@docs Time, Period, TimePicker, Settings, defaultSettings
+@docs Time, TimePicker, Settings, defaultSettings
 
 # Update
 @docs Msg, init, update
@@ -23,13 +23,6 @@ import Json.Decode
 -}
 type TimePicker
     = TimePicker Model
-
-
-{-| Represents AM and PM for a time
--}
-type Period
-    = AM
-    | PM
 
 
 {-| The base way to represent time
@@ -55,6 +48,11 @@ type alias Settings =
     , secondStep : Int
     , disabled : Bool
     }
+
+
+type Period
+    = AM
+    | PM
 
 
 type alias Model =
