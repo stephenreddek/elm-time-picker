@@ -1,9 +1,9 @@
-module TimePicker exposing (Time, TimePicker, Settings, Msg, defaultSettings, init, update, view)
+module TimePicker exposing (Time, TimePicker, Settings, Period(..), Msg, defaultSettings, init, update, view)
 
 {-| A time picker in pure elm.
 
 # Models
-@docs Time, TimePicker, Settings, defaultSettings
+@docs Time, TimePicker, Settings, Period, defaultSettings
 
 # Update
 @docs Msg, init, update
@@ -47,9 +47,16 @@ type alias Settings =
     , minuteStep : Int
     , secondStep : Int
     , disabled : Bool
+    , hideDisabledOptions : Bool
+    , isHourDisabled : Int -> Bool
+    , isMinuteDisabled : Int -> Bool
+    , isSecondDisabled : Int -> Bool
+    , isPeriodDisabled : Period -> Bool
     }
 
 
+{-| Period denotes whether its AM or PM when using 12-hour format
+-}
 type Period
     = AM
     | PM
@@ -87,6 +94,11 @@ defaultSettings =
     , minuteStep = 1
     , secondStep = 1
     , disabled = False
+    , hideDisabledOptions = False
+    , isHourDisabled = always False
+    , isMinuteDisabled = always False
+    , isSecondDisabled = always False
+    , isPeriodDisabled = always False
     }
 
 
@@ -212,18 +224,25 @@ view settings (TimePicker model) =
             else
                 toString value
 
-        selectionOption : String -> Bool -> Msg -> Html Msg
-        selectionOption valueText isSelected msg =
-            li [ onClick msg, classList [ ( "elm-time-picker-panel-select-option-selected", isSelected ) ] ]
-                [ text valueText ]
+        selectionOption : String -> Bool -> Bool -> Msg -> Html Msg
+        selectionOption valueText isSelected isDisabled msg =
+            let
+                optionalClick =
+                    if isDisabled then
+                        []
+                    else
+                        [ onClick msg ]
+            in
+                li ([ classList [ ( "elm-time-picker-panel-select-option-selected", isSelected ), ( "elm-time-picker-panel-select-option-disabled", isDisabled ) ] ] ++ optionalClick)
+                    [ text valueText ]
 
-        toOption : (a -> String) -> (Time -> a) -> (a -> Msg) -> a -> Html Msg
-        toOption formatter accessor toMsg value =
+        toOption : (a -> String) -> (Time -> a) -> (a -> Bool) -> (a -> Msg) -> a -> Html Msg
+        toOption formatter accessor isDisabledValue toMsg value =
             let
                 isSelected =
                     Maybe.map accessor model.value == Just value
             in
-                selectionOption (formatter value) isSelected (toMsg value)
+                selectionOption (formatter value) isSelected (isDisabledValue value) (toMsg value)
 
         onPicker ev =
             Json.Decode.succeed
@@ -235,7 +254,12 @@ view settings (TimePicker model) =
         hourOptions =
             if settings.showHours then
                 [ div [ class (cssPrefix ++ "panel-select") ]
-                    [ ul [] (List.map (toOption hourFormatter .hours SelectHour) hours) ]
+                    [ ul []
+                        (hours
+                            |> List.filter (\hour -> not settings.hideDisabledOptions || not (settings.isHourDisabled hour))
+                            |> List.map (toOption hourFormatter .hours settings.isHourDisabled SelectHour)
+                        )
+                    ]
                 ]
             else
                 []
@@ -243,7 +267,12 @@ view settings (TimePicker model) =
         minuteOptions =
             if settings.showMinutes then
                 [ div [ class (cssPrefix ++ "panel-select") ]
-                    [ ul [] (List.map (toOption paddedFormatter .minutes SelectMinute) minutes) ]
+                    [ ul []
+                        (minutes
+                            |> List.filter (\minute -> not settings.hideDisabledOptions || not (settings.isMinuteDisabled minute))
+                            |> List.map (toOption paddedFormatter .minutes settings.isMinuteDisabled SelectMinute)
+                        )
+                    ]
                 ]
             else
                 []
@@ -251,7 +280,12 @@ view settings (TimePicker model) =
         secondOptions =
             if settings.showSeconds then
                 [ div [ class (cssPrefix ++ "panel-select") ]
-                    [ ul [] (List.map (toOption paddedFormatter .seconds SelectSecond) seconds) ]
+                    [ ul []
+                        (seconds
+                            |> List.filter (\second -> not settings.hideDisabledOptions || not (settings.isSecondDisabled second))
+                            |> List.map (toOption paddedFormatter .seconds settings.isSecondDisabled SelectSecond)
+                        )
+                    ]
                 ]
             else
                 []
@@ -265,13 +299,22 @@ view settings (TimePicker model) =
                 |> Maybe.map (.hours >> (\hours -> hours >= 12))
                 |> Maybe.withDefault False
 
+        amSelectOption =
+            if not settings.hideDisabledOptions || not (settings.isPeriodDisabled AM) then
+                [ selectionOption "AM" isInAM (settings.isPeriodDisabled AM) (SelectPeriod AM) ]
+            else
+                []
+
+        pmSelectOption =
+            if not settings.hideDisabledOptions || not (settings.isPeriodDisabled PM) then
+                [ selectionOption "PM" isInPM (settings.isPeriodDisabled PM) (SelectPeriod PM) ]
+            else
+                []
+
         showPeriodOptions =
             if not settings.use24Hours && settings.showHours then
                 [ div [ class (cssPrefix ++ "panel-select") ]
-                    [ ul []
-                        [ selectionOption "AM" isInAM (SelectPeriod AM)
-                        , selectionOption "PM" isInPM (SelectPeriod PM)
-                        ]
+                    [ ul [] (amSelectOption ++ pmSelectOption)
                     ]
                 ]
             else

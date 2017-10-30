@@ -142,6 +142,15 @@
     background: #ecf6fd;
 }
 
+.elm-time-picker-panel-select-option-disabled {
+    color: rgba(0,0,0,.25);
+}
+
+.elm-time-picker-panel-select .elm-time-picker-panel-select-option-disabled:hover {
+    cursor: not-allowed;
+    background: transparent;
+}
+
 .elm-time-picker-panel-select-option-selected {
     background: #f7f7f7;
     font-weight: 700;
