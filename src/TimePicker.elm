@@ -259,16 +259,20 @@ view settings (TimePicker model) =
                 []
 
         isInAM =
+            Maybe.map (.hours >> (\hours -> hours < 12)) model.value
+                |> Maybe.withDefault False
+
+        isInPM =
             model.value
-                |> Maybe.map (.hours >> (\hours -> hours < 12))
-                |> Maybe.withDefault True
+                |> Maybe.map (.hours >> (\hours -> hours >= 12))
+                |> Maybe.withDefault False
 
         showPeriodOptions =
             if not settings.use24Hours && settings.showHours then
                 [ div [ class (cssPrefix ++ "panel-select") ]
                     [ ul []
                         [ selectionOption "AM" isInAM (SelectPeriod AM)
-                        , selectionOption "PM" (not isInAM) (SelectPeriod PM)
+                        , selectionOption "PM" isInPM (SelectPeriod PM)
                         ]
                     ]
                 ]
