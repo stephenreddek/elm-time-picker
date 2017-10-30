@@ -26,7 +26,7 @@ steppingSettings =
         defaultSettings =
             TimePicker.defaultSettings
     in
-        { defaultSettings | showSeconds = False, minuteStep = 15 }
+        { defaultSettings | showSeconds = False, minuteStep = 15, use24Hours = True }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -56,7 +56,7 @@ view { defaultTimePicker, steppingTimePicker } =
             , div []
                 [ Html.map DefaultTimePickerMsg <| TimePicker.view TimePicker.defaultSettings defaultTimePicker ]
             , h1 []
-                [ text "Time Picker without seconds and a minute step size of 15" ]
+                [ text "Time Picker without seconds and a minute step size of 15 in 24-hour format" ]
             , div []
                 [ Html.map SteppingTimePickerMsg <| TimePicker.view steppingSettings steppingTimePicker ]
             ]

@@ -33,20 +33,20 @@ type Period
 
 
 {-| The base way to represent time
- Note: Hours are counted from midnight at 0
+ Note: Hours are counted in 24-hour format from midnight at 0
 -}
 type alias Time =
     { hours : Int
     , minutes : Int
     , seconds : Int
-    , period : Period
     }
 
 
 {-| Contains the configuration that doesn't need to be maintained by the library
 -}
 type alias Settings =
-    { showMinutes : Bool
+    { showHours : Bool
+    , showMinutes : Bool
     , showSeconds : Bool
     , use24Hours : Bool
     , placeholder : String
@@ -80,7 +80,8 @@ type Msg
 -}
 defaultSettings : Settings
 defaultSettings =
-    { showMinutes = True
+    { showHours = True
+    , showMinutes = True
     , showSeconds = True
     , use24Hours = False
     , placeholder = "Select time"
@@ -106,7 +107,6 @@ defaultTime =
     { hours = 0
     , minutes = 0
     , seconds = 0
-    , period = AM
     }
 
 
@@ -150,7 +150,15 @@ update settings msg (TimePicker ({ value } as model)) =
                 timeToUpdate =
                     Maybe.withDefault defaultTime value
             in
-                TimePicker { model | value = Just { timeToUpdate | period = period } }
+                if period == AM then
+                    if timeToUpdate.hours >= 12 then
+                        TimePicker { model | value = Just { timeToUpdate | hours = timeToUpdate.hours - 12 } }
+                    else
+                        TimePicker { model | value = Just timeToUpdate }
+                else if timeToUpdate.hours >= 12 then
+                    TimePicker { model | value = Just timeToUpdate }
+                else
+                    TimePicker { model | value = Just { timeToUpdate | hours = timeToUpdate.hours + 12 } }
 
         NoOp ->
             TimePicker model
@@ -170,8 +178,19 @@ view settings (TimePicker model) =
             List.range 0 (maxVal // step)
                 |> List.map (\val -> val * step)
 
+        maxHours =
+            if settings.use24Hours then
+                23
+            else
+                11
+
         hours =
-            steppingRange settings.hourStep 11
+            if isInAM then
+                steppingRange settings.hourStep maxHours
+            else
+                maxHours
+                    |> steppingRange settings.hourStep
+                    |> List.map ((+) 12)
 
         minutes =
             steppingRange settings.minuteStep 59
@@ -186,10 +205,19 @@ view settings (TimePicker model) =
                 toString value
 
         hourFormatter value =
-            if value == 0 then
+            if settings.use24Hours then
+                paddedFormatter value
+            else if value == 0 then
                 "12"
+            else if value > 12 then
+                toString (value - 12)
             else
                 toString value
+
+        selectionOption : String -> Bool -> Msg -> Html Msg
+        selectionOption valueText isSelected msg =
+            li [ onClick msg, classList [ ( "elm-time-picker-panel-select-option-selected", isSelected ) ] ]
+                [ text valueText ]
 
         toOption : (a -> String) -> (Time -> a) -> (a -> Msg) -> a -> Html Msg
         toOption formatter accessor toMsg value =
@@ -197,8 +225,7 @@ view settings (TimePicker model) =
                 isSelected =
                     Maybe.map accessor model.value == Just value
             in
-                li [ onClick (toMsg value), classList [ ( "elm-time-picker-panel-select-option-selected", isSelected ) ] ]
-                    [ text (formatter value) ]
+                selectionOption (formatter value) isSelected (toMsg value)
 
         onPicker ev =
             Json.Decode.succeed
@@ -207,28 +234,92 @@ view settings (TimePicker model) =
                     , stopPropagation = True
                     }
 
-        optionsDisplay =
-            if model.open && not settings.disabled then
-                [ div [ class (cssPrefix ++ "panel-combobox"), onPicker "mousedown" NoOp, onPicker "mouseup" NoOp ]
-                    [ div [ class (cssPrefix ++ "panel-select") ]
-                        [ ul [] (List.map (toOption hourFormatter .hours SelectHour) hours) ]
-                    , div [ class (cssPrefix ++ "panel-select") ]
-                        [ ul [] (List.map (toOption paddedFormatter .minutes SelectMinute) minutes) ]
-                    , div [ class (cssPrefix ++ "panel-select") ]
-                        [ ul [] (List.map (toOption paddedFormatter .seconds SelectSecond) seconds) ]
-                    , div [ class (cssPrefix ++ "panel-select") ]
-                        [ ul []
-                            [ toOption toString .period SelectPeriod AM
-                            , toOption toString .period SelectPeriod PM
-                            ]
+        hourOptions =
+            if settings.showHours then
+                [ div [ class (cssPrefix ++ "panel-select") ]
+                    [ ul [] (List.map (toOption hourFormatter .hours SelectHour) hours) ]
+                ]
+            else
+                []
+
+        minuteOptions =
+            if settings.showMinutes then
+                [ div [ class (cssPrefix ++ "panel-select") ]
+                    [ ul [] (List.map (toOption paddedFormatter .minutes SelectMinute) minutes) ]
+                ]
+            else
+                []
+
+        secondOptions =
+            if settings.showSeconds then
+                [ div [ class (cssPrefix ++ "panel-select") ]
+                    [ ul [] (List.map (toOption paddedFormatter .seconds SelectSecond) seconds) ]
+                ]
+            else
+                []
+
+        isInAM =
+            model.value
+                |> Maybe.map (.hours >> (\hours -> hours < 12))
+                |> Maybe.withDefault True
+
+        showPeriodOptions =
+            if not settings.use24Hours && settings.showHours then
+                [ div [ class (cssPrefix ++ "panel-select") ]
+                    [ ul []
+                        [ selectionOption "AM" isInAM (SelectPeriod AM)
+                        , selectionOption "PM" (not isInAM) (SelectPeriod PM)
                         ]
                     ]
                 ]
             else
                 []
 
+        optionsDisplay =
+            if model.open && not settings.disabled then
+                [ div [ class (cssPrefix ++ "panel-combobox"), onPicker "mousedown" NoOp, onPicker "mouseup" NoOp ] <|
+                    hourOptions
+                        ++ minuteOptions
+                        ++ secondOptions
+                        ++ showPeriodOptions
+                ]
+            else
+                []
+
+        hoursDisplay time =
+            if settings.showHours then
+                [ hourFormatter time.hours ]
+            else
+                []
+
+        minutesDisplay time =
+            if settings.showMinutes then
+                [ paddedFormatter time.minutes ]
+            else
+                []
+
+        secondsDisplay time =
+            if settings.showSeconds then
+                [ paddedFormatter time.seconds ]
+            else
+                []
+
+        periodDisplay time =
+            if settings.showHours && not settings.use24Hours then
+                if isInAM then
+                    " AM"
+                else
+                    " PM"
+            else
+                ""
+
+        timePartsDisplay time =
+            [ hoursDisplay time, minutesDisplay time, secondsDisplay time ]
+                |> List.concat
+                |> String.join ":"
+
         formatValueDisplay time =
-            hourFormatter time.hours ++ ":" ++ paddedFormatter time.minutes ++ ":" ++ paddedFormatter time.seconds ++ " " ++ toString time.period
+            timePartsDisplay time ++ periodDisplay time
 
         inputValue =
             model.value
@@ -240,9 +331,11 @@ view settings (TimePicker model) =
                 |> Maybe.map (\_ -> [ a [ class (cssPrefix ++ "panel-clear-btn"), href "javascript:void(0);", onPicker "mousedown" NoOp, onPicker "mouseup" NoOp, onClick Clear ] [] ])
                 |> Maybe.withDefault []
     in
-        div [ class (cssPrefix ++ "container") ] <|
-            [ div [ class (cssPrefix ++ "input-container") ] <|
-                [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder, readonly True, disabled settings.disabled ] ++ inputValue) [] ]
-                    ++ clearButton
+        div [ class (cssPrefix ++ "container") ]
+            [ div [ class (cssPrefix ++ "inner-container") ] <|
+                [ div [ class (cssPrefix ++ "input-container") ] <|
+                    [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder, readonly True, disabled settings.disabled ] ++ inputValue) [] ]
+                        ++ clearButton
+                ]
+                    ++ optionsDisplay
             ]
-                ++ optionsDisplay
