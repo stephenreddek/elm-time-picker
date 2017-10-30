@@ -195,7 +195,7 @@ view settings (TimePicker model) =
                 11
 
         hours =
-            if settings.use24Hours && isInPM then
+            if not settings.use24Hours && isInPM then
                 maxHours
                     |> steppingRange settings.hourStep
                     |> List.map ((+) 12)
