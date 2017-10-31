@@ -1,9 +1,9 @@
-module TimePicker exposing (Time, TimePicker, Settings, Period(..), Msg, defaultSettings, init, update, view)
+module TimePicker exposing (Time, TimePicker, Settings, Period(..), Msg, defaultSettings, selectedTime, init, update, view)
 
 {-| A time picker in pure elm.
 
 # Models
-@docs Time, TimePicker, Settings, Period, defaultSettings
+@docs Time, TimePicker, Settings, Period, defaultSettings, selectedTime
 
 # Update
 @docs Msg, init, update
@@ -100,6 +100,13 @@ defaultSettings =
     , isSecondDisabled = always False
     , isPeriodDisabled = always False
     }
+
+
+{-| Returns the current value of the time picker
+-}
+selectedTime : TimePicker -> Maybe Time
+selectedTime (TimePicker { value }) =
+    value
 
 
 {-| Function for initializing a closed and empty TimePicker
