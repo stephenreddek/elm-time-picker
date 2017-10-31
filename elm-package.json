@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0",
+    "version": "1.0.1",
     "summary": "An elm implementation of a time picker",
     "repository": "https://github.com/stephenreddek/elm-time-picker.git",
     "license": "BSD3",
