@@ -95,6 +95,11 @@
     content: "X";
 }
 
+.elm-time-picker-input-container input[disabled] + .elm-time-picker-panel-clear-btn,
+.elm-time-picker-input-container input[disabled] + .elm-time-picker-panel-clear-btn:after {
+    cursor: not-allowed;
+}
+
 .elm-time-picker-panel-combobox::before,
 .elm-time-picker-panel-combobox::after {
     content: " ";
