@@ -121,7 +121,7 @@ init : Maybe Time -> TimePicker
 init initialValue =
     TimePicker
         { open = False
-        , value = Nothing
+        , value = initialValue
         }
 
 
