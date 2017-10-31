@@ -1,4 +1,4 @@
-module TimePicker exposing (Time, TimePicker, Settings, Period(..), Msg, defaultSettings, selectedTime, init, update, view)
+module TimePicker exposing (Time, TimePicker, Settings, Period(..), Msg, TimeEvent(..), defaultSettings, selectedTime, init, update, view)
 
 {-| A time picker in pure elm.
 
@@ -6,7 +6,7 @@ module TimePicker exposing (Time, TimePicker, Settings, Period(..), Msg, default
 @docs Time, TimePicker, Settings, Period, defaultSettings, selectedTime
 
 # Update
-@docs Msg, init, update
+@docs init, Msg, TimeEvent, update
 
 # View
 @docs view
@@ -25,8 +25,7 @@ type TimePicker
     = TimePicker Model
 
 
-{-| The base way to represent time
- Note: Hours are counted in 24-hour format from midnight at 0
+{-| The base way to represent time. Hours are counted in 24-hour format from midnight at 0
 -}
 type alias Time =
     { hours : Int
@@ -81,6 +80,13 @@ type Msg
     | NoOp
 
 
+{-| Used to communicate to the caller that the value has been set, changed, or cleared.
+-}
+type TimeEvent
+    = NoChange
+    | Changed (Maybe Time)
+
+
 {-| The basic configuration for a TimePicker
 -}
 defaultSettings : Settings
@@ -129,59 +135,71 @@ defaultTime =
 
 {-| Function to update the model when messages come
 -}
-update : Settings -> Msg -> TimePicker -> TimePicker
+update : Settings -> Msg -> TimePicker -> ( TimePicker, TimeEvent )
 update settings msg (TimePicker ({ value } as model)) =
     case msg of
         Clear ->
-            TimePicker { model | open = False, value = Nothing }
+            ( TimePicker { model | open = False, value = Nothing }, Changed Nothing )
 
         Focus ->
-            TimePicker { model | open = True }
+            ( TimePicker { model | open = True }, NoChange )
 
         Blur ->
-            TimePicker { model | open = False }
+            ( TimePicker { model | open = False }, NoChange )
 
         SelectHour hours ->
             let
                 timeToUpdate =
                     Maybe.withDefault defaultTime value
+
+                updatedTime =
+                    Just { timeToUpdate | hours = hours }
             in
-                TimePicker { model | value = Just { timeToUpdate | hours = hours } }
+                ( TimePicker { model | value = updatedTime }, Changed updatedTime )
 
         SelectMinute minutes ->
             let
                 timeToUpdate =
                     Maybe.withDefault defaultTime value
+
+                updatedTime =
+                    Just { timeToUpdate | minutes = minutes }
             in
-                TimePicker { model | value = Just { timeToUpdate | minutes = minutes } }
+                ( TimePicker { model | value = updatedTime }, Changed updatedTime )
 
         SelectSecond seconds ->
             let
                 timeToUpdate =
                     Maybe.withDefault defaultTime value
+
+                updatedTime =
+                    Just { timeToUpdate | seconds = seconds }
             in
-                TimePicker { model | value = Just { timeToUpdate | seconds = seconds } }
+                ( TimePicker { model | value = updatedTime }, Changed updatedTime )
 
         SelectPeriod period ->
             let
                 timeToUpdate =
                     Maybe.withDefault defaultTime value
-            in
-                case period of
-                    AM ->
-                        if timeToUpdate.hours >= 12 then
-                            TimePicker { model | value = Just { timeToUpdate | hours = timeToUpdate.hours - 12 } }
-                        else
-                            TimePicker { model | value = Just timeToUpdate }
 
-                    PM ->
-                        if timeToUpdate.hours >= 12 then
-                            TimePicker { model | value = Just timeToUpdate }
-                        else
-                            TimePicker { model | value = Just { timeToUpdate | hours = timeToUpdate.hours + 12 } }
+                updatedTime =
+                    case period of
+                        AM ->
+                            if timeToUpdate.hours >= 12 then
+                                Just { timeToUpdate | hours = timeToUpdate.hours - 12 }
+                            else
+                                Just timeToUpdate
+
+                        PM ->
+                            if timeToUpdate.hours >= 12 then
+                                Just timeToUpdate
+                            else
+                                Just { timeToUpdate | hours = timeToUpdate.hours + 12 }
+            in
+                ( TimePicker { model | value = updatedTime }, Changed updatedTime )
 
         NoOp ->
-            TimePicker model
+            ( TimePicker model, NoChange )
 
 
 cssPrefix : String
@@ -274,7 +292,7 @@ viewDropDown settings model =
         selectionOption valueText isSelected isDisabled msg =
             let
                 optionalClick =
-                    if isDisabled then
+                    if isDisabled || isSelected then
                         []
                     else
                         [ onClick msg ]

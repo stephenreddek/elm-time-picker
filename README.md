@@ -33,15 +33,23 @@ timePickerSettings =
         { defaultSettings | showSeconds = False, minuteStep = 15, use24Hours = True }
 ```
 
-Handle messages to the picker in the update function
+Handle messages to the picker in your update function. The TimePicker's update function also communicates when the value of the time picker has changed.
 ```elm
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg { timePicker } =
     case msg of
         TimePickerMsg msg ->
             let
-                updatedModel =
+                ( updatedModel, timeEvent ) =
                     TimePicker.update timePickerSettings msg timePicker
+
+                _ =
+                    case timeEvent of
+                        NoChange ->
+                            Nothing
+
+                        Changed time ->
+                            Debug.log "The value was changed to " time
             in
                 ( Model updatedModel, Cmd.none )
 ```

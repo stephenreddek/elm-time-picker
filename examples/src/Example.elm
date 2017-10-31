@@ -1,7 +1,7 @@
 module Examples exposing (main)
 
 import Html exposing (..)
-import TimePicker exposing (TimePicker)
+import TimePicker exposing (TimePicker, TimeEvent(..))
 
 
 type Msg
@@ -50,21 +50,21 @@ update msg model =
     case msg of
         DefaultTimePickerMsg msg ->
             let
-                updatedPicker =
+                ( updatedPicker, timeEvent ) =
                     TimePicker.update TimePicker.defaultSettings msg model.defaultTimePicker
             in
                 ( { model | defaultTimePicker = updatedPicker }, Cmd.none )
 
         SteppingTimePickerMsg msg ->
             let
-                updatedPicker =
+                ( updatedPicker, timeEvent ) =
                     TimePicker.update steppingSettings msg model.steppingTimePicker
             in
                 ( { model | steppingTimePicker = updatedPicker }, Cmd.none )
 
         PartiallyDisabledTimePickerMsg msg ->
             let
-                updatedPicker =
+                ( updatedPicker, timeEvent ) =
                     TimePicker.update partiallyDisabledSettings msg model.partiallyDisabledTimePicker
             in
                 ( { model | partiallyDisabledTimePicker = updatedPicker }, Cmd.none )
