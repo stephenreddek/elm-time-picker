@@ -1,6 +1,7 @@
 module Examples exposing (main)
 
 import Html exposing (..)
+import Html.Attributes exposing (..)
 import TimePicker exposing (TimePicker, TimeEvent(..))
 
 
@@ -74,17 +75,17 @@ view : Model -> Html Msg
 view { defaultTimePicker, steppingTimePicker, partiallyDisabledTimePicker } =
     div []
         [ div []
-            [ h1 []
+            [ h3 []
                 [ text "Time Picker with defaults" ]
             , div []
                 [ Html.map DefaultTimePickerMsg <| TimePicker.view TimePicker.defaultSettings defaultTimePicker ]
-            , h1 []
+            , h3 []
                 [ text "Time Picker without seconds and a minute step size of 15 in 24-hour format" ]
             , div []
                 [ Html.map SteppingTimePickerMsg <| TimePicker.view steppingSettings steppingTimePicker ]
-            , h1 []
-                [ text "Time Picker with even options disabled" ]
-            , div []
+            , h3 []
+                [ text "Time Picker with even options disabled and opens upwards" ]
+            , div [ class "elm-time-picker-open-up" ]
                 [ Html.map PartiallyDisabledTimePickerMsg <| TimePicker.view partiallyDisabledSettings partiallyDisabledTimePicker ]
             ]
         ]
