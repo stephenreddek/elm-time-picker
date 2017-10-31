@@ -21,7 +21,7 @@ The `TimePicker.init` function creates a time picker. If there's a value provide
     }
 ```
 
-Options about how to display the time picker are passed into the `view` and `update` function calls. You can create the record one time and reference it in each call or have modified settings for difference calls.
+Options about how to display the time picker are passed into the `view` and `update` function calls. You can create the record one time and reference it in each call or have modified settings for different calls.
 
 ```elm
 timePickerSettings : TimePicker.Settings
