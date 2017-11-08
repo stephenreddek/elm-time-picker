@@ -25,7 +25,7 @@ type TimePicker
     = TimePicker Model
 
 
-{-| The base way to represent time. Hours are counted in 24-hour format from midnight at 0
+{-| The base way to represent time. Hours are always counted in 24-hour format with midnight at 0
 -}
 type alias Time =
     { hours : Int
@@ -311,27 +311,16 @@ parseTimeParts settings period timeParts =
                 ++ partSetter settings.showMinutes setMinutes
                 ++ partSetter settings.showSeconds setSeconds
 
-        adjustFor12HourInput time =
-            if time.hours == 12 then
-                case period of
-                    Just AM ->
-                        { time | hours = 0 }
-
-                    Just PM ->
-                        time
-
-                    Nothing ->
-                        if settings.use24Hours then
-                            time
-                        else
-                            { time | hours = 0 }
+        setToMidnightIf12HourFormatAt12 time =
+            if (not settings.use24Hours) && time.hours == 12 then
+                { time | hours = 0 }
             else
                 time
 
         withPeriod =
             period
                 |> Maybe.map setTimeWithPeriod
-                |> Maybe.withDefault identity
+                |> Maybe.withDefault setToMidnightIf12HourFormatAt12
     in
         if List.isEmpty timeParts then
             Ok Nothing
@@ -339,8 +328,7 @@ parseTimeParts settings period timeParts =
             Err ()
         else
             List.map2 (,) timeParts allSetters
-                |> List.foldl (\( val, setter ) -> setter val) defaultTime
-                |> adjustFor12HourInput
+                |> List.foldl (\( val, setter ) timeAcc -> setter val timeAcc) defaultTime
                 |> withPeriod
                 |> Just
                 |> Ok
