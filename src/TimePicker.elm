@@ -34,7 +34,9 @@ type alias Time =
     }
 
 
-{-| Contains the configuration that doesn't need to be maintained by the library
+{-| Contains the configuration that doesn't need to be maintained by the library.
+
+- isHourDisabled - Will be run on the 24-hour version of the hour.
 -}
 type alias Settings =
     { showHours : Bool
@@ -64,6 +66,7 @@ type Period
 type alias Model =
     { open : Bool
     , value : Maybe Time
+    , inputText : Maybe String
     }
 
 
@@ -78,6 +81,8 @@ type Msg
     | SelectSecond Int
     | SelectPeriod Period
     | NoOp
+    | TextChanged String
+    | SubmitText String
 
 
 {-| Used to communicate to the caller that the value has been set, changed, or cleared.
@@ -122,6 +127,7 @@ init initialValue =
     TimePicker
         { open = False
         , value = initialValue
+        , inputText = Nothing
         }
 
 
@@ -155,7 +161,7 @@ update settings msg (TimePicker ({ value } as model)) =
                 updatedTime =
                     Just { timeToUpdate | hours = hours }
             in
-                ( TimePicker { model | value = updatedTime }, Changed updatedTime )
+                ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
         SelectMinute minutes ->
             let
@@ -165,7 +171,7 @@ update settings msg (TimePicker ({ value } as model)) =
                 updatedTime =
                     Just { timeToUpdate | minutes = minutes }
             in
-                ( TimePicker { model | value = updatedTime }, Changed updatedTime )
+                ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
         SelectSecond seconds ->
             let
@@ -175,31 +181,215 @@ update settings msg (TimePicker ({ value } as model)) =
                 updatedTime =
                     Just { timeToUpdate | seconds = seconds }
             in
-                ( TimePicker { model | value = updatedTime }, Changed updatedTime )
+                ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
         SelectPeriod period ->
             let
-                timeToUpdate =
-                    Maybe.withDefault defaultTime value
-
                 updatedTime =
-                    case period of
-                        AM ->
-                            if timeToUpdate.hours >= 12 then
-                                Just { timeToUpdate | hours = timeToUpdate.hours - 12 }
-                            else
-                                Just timeToUpdate
-
-                        PM ->
-                            if timeToUpdate.hours >= 12 then
-                                Just timeToUpdate
-                            else
-                                Just { timeToUpdate | hours = timeToUpdate.hours + 12 }
+                    value
+                        |> Maybe.withDefault defaultTime
+                        |> setTimeWithPeriod period
+                        |> Just
             in
-                ( TimePicker { model | value = updatedTime }, Changed updatedTime )
+                ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
         NoOp ->
             ( TimePicker model, NoChange )
+
+        TextChanged text ->
+            ( TimePicker { model | inputText = Just text }, NoChange )
+
+        SubmitText text ->
+            let
+                parsedTime =
+                    parseText settings text
+
+                isValidInput =
+                    parsedTime
+                        |> Result.map
+                            (Maybe.map (isValidTime settings)
+                                >> Maybe.withDefault True
+                            )
+                        |> Result.withDefault False
+
+                updatedValue =
+                    if isValidInput then
+                        Result.withDefault value parsedTime
+                    else
+                        value
+
+                timeEvent =
+                    if updatedValue == value then
+                        NoChange
+                    else
+                        Changed updatedValue
+            in
+                ( TimePicker { model | inputText = Nothing, value = updatedValue }, timeEvent )
+
+
+setTimeWithPeriod : Period -> Time -> Time
+setTimeWithPeriod period time =
+    case period of
+        AM ->
+            if time.hours >= 12 then
+                { time | hours = time.hours - 12 }
+            else
+                time
+
+        PM ->
+            if time.hours >= 12 then
+                time
+            else
+                { time | hours = time.hours + 12 }
+
+
+period : Time -> Period
+period time =
+    if time.hours >= 12 then
+        PM
+    else
+        AM
+
+
+isValidTime : Settings -> Time -> Bool
+isValidTime settings time =
+    let
+        isValidPeriod =
+            settings.use24Hours || not (settings.isPeriodDisabled <| period time)
+
+        isValidHour =
+            (not (settings.isHourDisabled time.hours))
+                && (time.hours >= 0)
+                && (time.hours <= 23)
+
+        isValidMinute =
+            (not (settings.isMinuteDisabled time.minutes))
+                && (time.minutes >= 0)
+                && (time.minutes <= 59)
+
+        isValidSecond =
+            (not (settings.isSecondDisabled time.seconds))
+                && (time.seconds >= 0)
+                && (time.seconds <= 59)
+    in
+        isValidHour && isValidMinute && isValidSecond && isValidPeriod
+
+
+parsePeriod : String -> Result () (Maybe Period)
+parsePeriod text =
+    case String.toLower text of
+        "am" ->
+            Ok (Just AM)
+
+        "pm" ->
+            Ok (Just PM)
+
+        _ ->
+            Err ()
+
+
+parseTimeParts : Settings -> Maybe Period -> List Int -> Result () (Maybe Time)
+parseTimeParts settings period timeParts =
+    let
+        setHours hours time =
+            { time | hours = hours }
+
+        setMinutes minutes time =
+            { time | minutes = minutes }
+
+        setSeconds seconds time =
+            { time | seconds = seconds }
+
+        partSetter val setter =
+            if val then
+                [ setter ]
+            else
+                []
+
+        allSetters =
+            partSetter settings.showHours setHours
+                ++ partSetter settings.showMinutes setMinutes
+                ++ partSetter settings.showSeconds setSeconds
+
+        adjustFor12HourInput time =
+            if time.hours == 12 then
+                case period of
+                    Just AM ->
+                        { time | hours = 0 }
+
+                    Just PM ->
+                        time
+
+                    Nothing ->
+                        if settings.use24Hours then
+                            time
+                        else
+                            { time | hours = 0 }
+            else
+                time
+
+        withPeriod =
+            period
+                |> Maybe.map setTimeWithPeriod
+                |> Maybe.withDefault identity
+    in
+        if List.isEmpty timeParts then
+            Ok Nothing
+        else if List.length timeParts > List.length allSetters then
+            Err ()
+        else
+            List.map2 (,) timeParts allSetters
+                |> List.foldl (\( val, setter ) -> setter val) defaultTime
+                |> adjustFor12HourInput
+                |> withPeriod
+                |> Just
+                |> Ok
+
+
+parseText : Settings -> String -> Result () (Maybe Time)
+parseText settings text =
+    let
+        combineTimeParts =
+            let
+                step e acc =
+                    case e of
+                        Err _ ->
+                            Err ()
+
+                        Ok x ->
+                            Result.map ((::) x) acc
+            in
+                List.foldr step (Ok [])
+
+        splitText =
+            text
+                |> String.trim
+                |> String.split " "
+
+        period =
+            splitText
+                |> List.drop 1
+                |> List.head
+                |> Maybe.map parsePeriod
+                |> Maybe.withDefault (Ok Nothing)
+    in
+        if List.length splitText > 2 then
+            Err ()
+        else
+            case period of
+                Ok parsedPeriod ->
+                    if String.isEmpty (String.trim text) then
+                        Ok Nothing
+                    else
+                        splitText
+                            |> List.head
+                            |> Result.fromMaybe ()
+                            |> Result.map (String.split ":")
+                            |> Result.andThen (List.map String.toInt >> combineTimeParts)
+                            |> Result.andThen (parseTimeParts settings parsedPeriod)
+
+                Err () ->
+                    Err ()
 
 
 cssPrefix : String
@@ -216,6 +406,11 @@ onWithoutLosingFocus eventName =
             }
 
 
+onChange : (String -> Msg) -> Html.Attribute Msg
+onChange handler =
+    on "change" (Json.Decode.map handler targetValue)
+
+
 {-| Function for viewing the time picker
 -}
 view : Settings -> TimePicker -> Html Msg
@@ -227,16 +422,28 @@ view settings (TimePicker model) =
             else
                 []
 
-        inputValue =
+        chosenTimeValue =
             model.value
-                |> Maybe.map (formatValue settings >> Html.Attributes.value >> List.singleton)
-                |> Maybe.withDefault []
+                |> Maybe.map (formatValue settings)
+                |> Maybe.withDefault ""
+                |> Html.Attributes.value
+
+        inputValue =
+            model.inputText
+                |> Maybe.map Html.Attributes.value
+                |> Maybe.withDefault chosenTimeValue
 
         optionalClear =
             if settings.disabled then
                 []
             else
                 [ onClick Clear ]
+
+        optionalFocusOnClick =
+            if not model.open then
+                [ onClick Focus ]
+            else
+                []
 
         clearButton =
             model.value
@@ -246,7 +453,20 @@ view settings (TimePicker model) =
         div [ classList [ ( cssPrefix ++ "container", True ), ( cssPrefix ++ "active", model.open ) ] ]
             [ div [ class (cssPrefix ++ "inner-container") ] <|
                 [ div [ class (cssPrefix ++ "input-container") ] <|
-                    [ input ([ type_ "text", onFocus Focus, onBlur Blur, placeholder settings.placeholder, readonly True, disabled settings.disabled ] ++ inputValue) [] ]
+                    [ input
+                        ([ type_ "text"
+                         , onFocus Focus
+                         , onBlur Blur
+                         , placeholder settings.placeholder
+                         , disabled settings.disabled
+                         , onInput TextChanged
+                         , onChange SubmitText
+                         , inputValue
+                         ]
+                            ++ optionalFocusOnClick
+                        )
+                        []
+                    ]
                         ++ clearButton
                 ]
                     ++ optionsDisplay
