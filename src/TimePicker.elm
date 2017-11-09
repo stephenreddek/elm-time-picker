@@ -17,6 +17,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode
+import Regex exposing (HowMany(..))
 
 
 {-| The base model for the time picker
@@ -317,10 +318,13 @@ parseTimeParts settings period timeParts =
             else
                 time
 
-        withPeriod =
-            period
-                |> Maybe.map setTimeWithPeriod
-                |> Maybe.withDefault setToMidnightIf12HourFormatAt12
+        withPeriod time =
+            if time.hours >= 0 && time.hours <= 12 then
+                period
+                    |> Maybe.map ((flip setTimeWithPeriod) time)
+                    |> Maybe.withDefault (setToMidnightIf12HourFormatAt12 time)
+            else
+                time
     in
         if List.isEmpty timeParts then
             Ok Nothing
@@ -349,35 +353,36 @@ parseText settings text =
             in
                 List.foldr step (Ok [])
 
-        splitText =
-            text
-                |> String.trim
-                |> String.split " "
+        periodRegex =
+            Regex.caseInsensitive (Regex.regex "(am|pm)$")
 
-        period =
-            splitText
-                |> List.drop 1
-                |> List.head
-                |> Maybe.map parsePeriod
-                |> Maybe.withDefault (Ok Nothing)
+        trimmed =
+            String.trim text
+
+        periodFindResults =
+            Regex.find (AtMost 1) periodRegex trimmed
+
+        ( timeText, period ) =
+            case periodFindResults of
+                periodMatch :: _ ->
+                    ( String.trim (String.slice 0 periodMatch.index trimmed), parsePeriod periodMatch.match )
+
+                [] ->
+                    ( trimmed, Ok Nothing )
     in
-        if List.length splitText > 2 then
-            Err ()
-        else
-            case period of
-                Ok parsedPeriod ->
-                    if String.isEmpty (String.trim text) then
-                        Ok Nothing
-                    else
-                        splitText
-                            |> List.head
-                            |> Result.fromMaybe ()
-                            |> Result.map (String.split ":")
-                            |> Result.andThen (List.map String.toInt >> combineTimeParts)
-                            |> Result.andThen (parseTimeParts settings parsedPeriod)
+        case period of
+            Ok parsedPeriod ->
+                if String.isEmpty timeText then
+                    Ok Nothing
+                else
+                    timeText
+                        |> String.split ":"
+                        |> List.map String.toInt
+                        |> combineTimeParts
+                        |> Result.andThen (parseTimeParts settings parsedPeriod)
 
-                Err () ->
-                    Err ()
+            Err () ->
+                Err ()
 
 
 cssPrefix : String
