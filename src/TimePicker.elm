@@ -162,7 +162,7 @@ update settings msg (TimePicker ({ value } as model)) =
                             Just { time | hours = hours }
 
                         Nothing ->
-                            Just (defaultPeriodIn12HourFormat settings True { defaultTime | hours = hours })
+                            Just (defaultPeriodIn12HourFormatForSelection settings { defaultTime | hours = hours })
             in
                 ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
@@ -246,16 +246,21 @@ setTimeWithPeriod period time =
                 { time | hours = time.hours + 12 }
 
 
-
--- 7 AM - 11 AM
--- 12 PM - 6 PM
-
-
-defaultPeriodIn12HourFormat : Settings -> Bool -> Time -> Time
-defaultPeriodIn12HourFormat settings zeroIs12 time =
+defaultPeriodIn12HourFormatForInput : Settings -> Time -> Time
+defaultPeriodIn12HourFormatForInput settings time =
     if settings.use24Hours then
         time
-    else if (time.hours > 0 || (time.hours == 0 && zeroIs12)) && time.hours <= 6 then
+    else if time.hours > 0 && time.hours <= 6 then
+        { time | hours = time.hours + 12 }
+    else
+        time
+
+
+defaultPeriodIn12HourFormatForSelection : Settings -> Time -> Time
+defaultPeriodIn12HourFormatForSelection settings time =
+    if settings.use24Hours then
+        time
+    else if time.hours >= 0 && time.hours <= 6 then
         { time | hours = time.hours + 12 }
     else
         time
@@ -333,7 +338,7 @@ parseTimeParts settings period timeParts =
             if time.hours >= 0 && time.hours <= 12 then
                 period
                     |> Maybe.map ((flip setTimeWithPeriod) time)
-                    |> Maybe.withDefault (defaultPeriodIn12HourFormat settings False time)
+                    |> Maybe.withDefault (defaultPeriodIn12HourFormatForInput settings time)
             else
                 time
     in
