@@ -504,28 +504,29 @@ formatValue settings time =
         timePartsDisplay time ++ periodDisplay time
 
 
+dropdownOption : String -> Bool -> Bool -> Msg -> Html Msg
+dropdownOption valueText isSelected isDisabled msg =
+    let
+        optionalClick =
+            if isDisabled || isSelected then
+                []
+            else
+                [ onClick msg ]
+    in
+        li ([ classList [ ( "elm-time-picker-panel-select-option-selected", isSelected ), ( "elm-time-picker-panel-select-option-disabled", isDisabled ) ] ] ++ optionalClick)
+            [ text valueText ]
+
+
 viewDropDown : Settings -> Model -> Html Msg
 viewDropDown settings model =
     let
-        selectionOption : String -> Bool -> Bool -> Msg -> Html Msg
-        selectionOption valueText isSelected isDisabled msg =
-            let
-                optionalClick =
-                    if isDisabled || isSelected then
-                        []
-                    else
-                        [ onClick msg ]
-            in
-                li ([ classList [ ( "elm-time-picker-panel-select-option-selected", isSelected ), ( "elm-time-picker-panel-select-option-disabled", isDisabled ) ] ] ++ optionalClick)
-                    [ text valueText ]
-
         toOption : (Int -> String) -> (Time -> Int) -> (Int -> Bool) -> Int -> (Int -> Msg) -> Int -> Html Msg
         toOption formatter accessor isDisabledValue stepSize toMsg value =
             let
                 isSelected =
                     Maybe.map (accessor >> roundToStep stepSize) model.value == Just value
             in
-                selectionOption (formatter value) isSelected (isDisabledValue value) (toMsg value)
+                dropdownOption (formatter value) isSelected (isDisabledValue value) (toMsg value)
 
         steppingRange step minVal maxVal =
             List.range minVal (maxVal // step)
@@ -589,7 +590,7 @@ viewDropDown settings model =
 
         periodSelectionOption period =
             if not settings.hideDisabledOptions || not (settings.isPeriodDisabled period) then
-                [ selectionOption (toString period) (isInPeriod period model) (settings.isPeriodDisabled period) (SelectPeriod period) ]
+                [ dropdownOption (toString period) (isInPeriod period model) (settings.isPeriodDisabled period) (SelectPeriod period) ]
             else
                 []
 
