@@ -156,11 +156,13 @@ update settings msg (TimePicker ({ value } as model)) =
 
         SelectHour hours ->
             let
-                timeToUpdate =
-                    Maybe.withDefault defaultTime value
-
                 updatedTime =
-                    Just { timeToUpdate | hours = hours }
+                    case value of
+                        Just time ->
+                            Just { time | hours = hours }
+
+                        Nothing ->
+                            Just (defaultPeriodIn12HourFormat settings True { defaultTime | hours = hours })
             in
                 ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
@@ -244,6 +246,21 @@ setTimeWithPeriod period time =
                 { time | hours = time.hours + 12 }
 
 
+
+-- 7 AM - 11 AM
+-- 12 PM - 6 PM
+
+
+defaultPeriodIn12HourFormat : Settings -> Bool -> Time -> Time
+defaultPeriodIn12HourFormat settings zeroIs12 time =
+    if settings.use24Hours then
+        time
+    else if (time.hours > 0 || (time.hours == 0 && zeroIs12)) && time.hours <= 6 then
+        { time | hours = time.hours + 12 }
+    else
+        time
+
+
 period : Time -> Period
 period time =
     if time.hours >= 12 then
@@ -312,17 +329,11 @@ parseTimeParts settings period timeParts =
                 ++ partSetter settings.showMinutes setMinutes
                 ++ partSetter settings.showSeconds setSeconds
 
-        setToMidnightIf12HourFormatAt12 time =
-            if (not settings.use24Hours) && time.hours == 12 then
-                { time | hours = 0 }
-            else
-                time
-
         withPeriod time =
             if time.hours >= 0 && time.hours <= 12 then
                 period
                     |> Maybe.map ((flip setTimeWithPeriod) time)
-                    |> Maybe.withDefault (setToMidnightIf12HourFormatAt12 time)
+                    |> Maybe.withDefault (defaultPeriodIn12HourFormat settings False time)
             else
                 time
     in
