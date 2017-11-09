@@ -519,17 +519,20 @@ viewDropDown settings model =
                 li ([ classList [ ( "elm-time-picker-panel-select-option-selected", isSelected ), ( "elm-time-picker-panel-select-option-disabled", isDisabled ) ] ] ++ optionalClick)
                     [ text valueText ]
 
-        toOption : (a -> String) -> (Time -> a) -> (a -> Bool) -> (a -> Msg) -> a -> Html Msg
-        toOption formatter accessor isDisabledValue toMsg value =
+        toOption : (Int -> String) -> (Time -> Int) -> (Int -> Bool) -> Int -> (Int -> Msg) -> Int -> Html Msg
+        toOption formatter accessor isDisabledValue stepSize toMsg value =
             let
                 isSelected =
-                    Maybe.map accessor model.value == Just value
+                    Maybe.map (accessor >> roundToStep stepSize) model.value == Just value
             in
                 selectionOption (formatter value) isSelected (isDisabledValue value) (toMsg value)
 
         steppingRange step minVal maxVal =
             List.range minVal (maxVal // step)
                 |> List.map (\val -> val * step)
+
+        roundToStep step val =
+            (val // step) * step
 
         hours =
             if settings.use24Hours then
@@ -551,7 +554,7 @@ viewDropDown settings model =
                     [ ul []
                         (hours
                             |> List.filter (\hour -> not settings.hideDisabledOptions || not (settings.isHourDisabled hour))
-                            |> List.map (toOption (hourFormatter settings) .hours settings.isHourDisabled SelectHour)
+                            |> List.map (toOption (hourFormatter settings) .hours settings.isHourDisabled settings.hourStep SelectHour)
                         )
                     ]
                 ]
@@ -564,7 +567,7 @@ viewDropDown settings model =
                     [ ul []
                         (minutes
                             |> List.filter (\minute -> not settings.hideDisabledOptions || not (settings.isMinuteDisabled minute))
-                            |> List.map (toOption paddedFormatter .minutes settings.isMinuteDisabled SelectMinute)
+                            |> List.map (toOption paddedFormatter .minutes settings.isMinuteDisabled settings.minuteStep SelectMinute)
                         )
                     ]
                 ]
@@ -577,7 +580,7 @@ viewDropDown settings model =
                     [ ul []
                         (seconds
                             |> List.filter (\second -> not settings.hideDisabledOptions || not (settings.isSecondDisabled second))
-                            |> List.map (toOption paddedFormatter .seconds settings.isSecondDisabled SelectSecond)
+                            |> List.map (toOption paddedFormatter .seconds settings.isSecondDisabled settings.secondStep SelectSecond)
                         )
                     ]
                 ]
