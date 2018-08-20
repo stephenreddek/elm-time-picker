@@ -7,3 +7,4 @@ repl-temp-*
 
 #nightwatch reports
 /reports
+examples/elm.js
