@@ -1,8 +1,9 @@
 module Examples exposing (main)
 
+import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import TimePicker exposing (TimePicker, TimeEvent(..))
+import TimePicker exposing (TimeEvent(..), TimePicker)
 
 
 type Msg
@@ -18,9 +19,9 @@ type alias Model =
     }
 
 
-init : ( Model, Cmd Msg )
+init : Model
 init =
-    ( Model (TimePicker.init Nothing) (TimePicker.init Nothing) (TimePicker.init Nothing), Cmd.none )
+    Model (TimePicker.init Nothing) (TimePicker.init Nothing) (TimePicker.init Nothing)
 
 
 steppingSettings : TimePicker.Settings
@@ -29,7 +30,7 @@ steppingSettings =
         defaultSettings =
             TimePicker.defaultSettings
     in
-        { defaultSettings | showSeconds = False, minuteStep = 15, use24Hours = True }
+    { defaultSettings | showSeconds = False, minuteStep = 15, use24Hours = True }
 
 
 partiallyDisabledSettings : TimePicker.Settings
@@ -38,37 +39,37 @@ partiallyDisabledSettings =
         defaultSettings =
             TimePicker.defaultSettings
     in
-        { defaultSettings
-            | isHourDisabled = (\value -> value % 2 == 0)
-            , isMinuteDisabled = (\value -> value % 2 == 0)
-            , isSecondDisabled = (\value -> value % 2 == 0)
-            , isPeriodDisabled = (==) TimePicker.PM
-        }
+    { defaultSettings
+        | isHourDisabled = \value -> modBy 2 value == 0
+        , isMinuteDisabled = \value -> modBy 2 value == 0
+        , isSecondDisabled = \value -> modBy 2 value == 0
+        , isPeriodDisabled = (==) TimePicker.PM
+    }
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> Model
 update msg model =
     case msg of
-        DefaultTimePickerMsg msg ->
+        DefaultTimePickerMsg m ->
             let
                 ( updatedPicker, timeEvent ) =
-                    TimePicker.update TimePicker.defaultSettings msg model.defaultTimePicker
+                    TimePicker.update TimePicker.defaultSettings m model.defaultTimePicker
             in
-                ( { model | defaultTimePicker = updatedPicker }, Cmd.none )
+            { model | defaultTimePicker = updatedPicker }
 
-        SteppingTimePickerMsg msg ->
+        SteppingTimePickerMsg m ->
             let
                 ( updatedPicker, timeEvent ) =
-                    TimePicker.update steppingSettings msg model.steppingTimePicker
+                    TimePicker.update steppingSettings m model.steppingTimePicker
             in
-                ( { model | steppingTimePicker = updatedPicker }, Cmd.none )
+            { model | steppingTimePicker = updatedPicker }
 
-        PartiallyDisabledTimePickerMsg msg ->
+        PartiallyDisabledTimePickerMsg m ->
             let
                 ( updatedPicker, timeEvent ) =
-                    TimePicker.update partiallyDisabledSettings msg model.partiallyDisabledTimePicker
+                    TimePicker.update partiallyDisabledSettings m model.partiallyDisabledTimePicker
             in
-                ( { model | partiallyDisabledTimePicker = updatedPicker }, Cmd.none )
+            { model | partiallyDisabledTimePicker = updatedPicker }
 
 
 view : Model -> Html Msg
@@ -91,11 +92,10 @@ view { defaultTimePicker, steppingTimePicker, partiallyDisabledTimePicker } =
         ]
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    Html.program
+    Browser.sandbox
         { init = init
         , update = update
         , view = view
-        , subscriptions = always Sub.none
         }

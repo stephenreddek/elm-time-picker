@@ -1,6 +1,6 @@
 const url = "http://localhost:8000/nightwatch-tests/index.html";
 
-const titleSelector = "h3"
+const titleSelector = "h3";
 
 const textInputSelector = ".elm-time-picker-input-container input";
 
@@ -17,157 +17,199 @@ const selectedHoursSelector = "#selected-hours";
 const selectedMinutesSelector = "#selected-minutes";
 const selectedSecondsSelector = "#selected-seconds";
 
-const testValidManualInput = (input, expectedResult, hours, minutes, seconds) => {
+const testValidManualInput = (
+  input,
+  expectedResult,
+  hours,
+  minutes,
+  seconds
+) => {
   return {
-    [`It should support manually entering "${input}"`]: (client) => {
+    [`It should support manually entering "${input}"`]: client => {
       client.url(url);
       client.expect.element(textInputSelector).to.be.present.before(1000);
       client.click(textInputSelector);
-      sendSlowly(client,textInputSelector, [...input, client.Keys.ENTER]);
+      sendSlowly(client, textInputSelector, [...input, client.Keys.ENTER]);
 
       // now we click on another value, to make sure the input is uptimed
       client.click(titleSelector);
-      client.expect.element(textInputSelector).value.to.equal(expectedResult).before(1000);
+      client.expect
+        .element(textInputSelector)
+        .value.to.equal(expectedResult)
+        .before(1000);
       client.expect.element(selectedHoursSelector).text.to.equal(hours);
       client.expect.element(selectedMinutesSelector).text.to.equal(minutes);
       client.expect.element(selectedSecondsSelector).text.to.equal(seconds);
       client.end();
-    },
-  }
-}
+    }
+  };
+};
 
-const testInvalidManualInput = (input) => {
+const testInvalidManualInput = input => {
   return {
-    [`It should not allow manually entering "${input}"`]: (client) => {
+    [`It should not allow manually entering "${input}"`]: client => {
       client.url(url);
       client.expect.element(textInputSelector).to.be.present.before(1000);
       client.click(textInputSelector);
-      sendSlowly(client,textInputSelector, [...input, client.Keys.ENTER]);
+      sendSlowly(client, textInputSelector, [...input, client.Keys.ENTER]);
 
       // now we click on another value, to make sure the input is uptimed
       client.click(titleSelector);
-      client.expect.element(textInputSelector).value.to.equal("").before(1000);
+      client.expect
+        .element(textInputSelector)
+        .value.to.equal("")
+        .before(1000);
       client.expect.element(selectedHoursSelector).text.to.equal("");
       client.expect.element(selectedMinutesSelector).text.to.equal("");
       client.expect.element(selectedSecondsSelector).text.to.equal("");
       client.end();
-    },
-  }
-}
+    }
+  };
+};
 
 const clearWithBackspace = (client, selector, n) => {
-  for(var i = 0; i < n; i++) {
+  for (var i = 0; i < n; i++) {
     client.setValue(selector, client.Keys.BACKSPACE);
     client.pause(1);
   }
-}
+};
 
 const sendSlowly = (client, selector, keys) => {
-  keys.forEach ((key) => {
+  keys.forEach(key => {
     client.setValue(selector, key);
     client.pause(1);
   });
-}
+};
 
 module.exports = {
-  'When selecting hour 5 with the mouse, it should default the period to PM and appear in the text input': (client) => {
+  "When selecting hour 5 with the mouse, it should default the period to PM and appear in the text input": client => {
     client.url(url);
     client.expect.element(textInputSelector).to.be.present.before(1000);
     client.click(textInputSelector);
     client.expect.element(hour5Selector).to.be.present.before(1000);
     client.click(hour5Selector);
-    client.expect.element(textInputSelector).value.to.equal("5:00:00 PM").before(1000);
+    client.expect
+      .element(textInputSelector)
+      .value.to.equal("5:00:00 PM")
+      .before(1000);
     client.expect.element(selectedHoursSelector).text.to.equal(17);
     client.expect.element(selectedMinutesSelector).text.to.equal(0);
     client.expect.element(selectedSecondsSelector).text.to.equal(0);
     client.end();
   },
 
-  'When selecting hour 12 with the mouse, it should default the period to PM and appear in the text input': (client) => {
+  "When selecting hour 12 with the mouse, it should default the period to PM and appear in the text input": client => {
     client.url(url);
     client.expect.element(textInputSelector).to.be.present.before(1000);
     client.click(textInputSelector);
     client.expect.element(hour12Selector).to.be.present.before(1000);
     client.click(hour12Selector);
-    client.expect.element(textInputSelector).value.to.equal("12:00:00 PM").before(1000);
+    client.expect
+      .element(textInputSelector)
+      .value.to.equal("12:00:00 PM")
+      .before(1000);
     client.expect.element(selectedHoursSelector).text.to.equal(12);
     client.expect.element(selectedMinutesSelector).text.to.equal(0);
     client.expect.element(selectedSecondsSelector).text.to.equal(0);
     client.end();
   },
 
-  'When entering text, and then selecting a time with the mouse, the selected time should appear in the text input': (client) => {
+  "When entering text, and then selecting a time with the mouse, the selected time should appear in the text input": client => {
     client.url(url);
     client.expect.element(textInputSelector).to.be.present.before(1000);
     client.click(textInputSelector);
     client.setValue(textInputSelector, "1:00:00 AM");
     client.expect.element(hour5Selector).to.be.present.before(1000);
     client.click(hour5Selector);
-    client.expect.element(textInputSelector).value.to.equal("5:00:00 PM").before(1000);
+    client.expect
+      .element(textInputSelector)
+      .value.to.equal("5:00:00 PM")
+      .before(1000);
     client.expect.element(selectedHoursSelector).text.to.equal(17);
     client.expect.element(selectedMinutesSelector).text.to.equal(0);
     client.expect.element(selectedSecondsSelector).text.to.equal(0);
     client.end();
   },
 
-  'When a valid time has been entered, and then selecting an hour with the mouse, the selected hour should use the period from the input time': (client) => {
+  "When a valid time has been entered, and then selecting an hour with the mouse, the selected hour should use the period from the input time": client => {
     client.url(url);
     client.expect.element(textInputSelector).to.be.present.before(1000);
     client.click(textInputSelector);
-    sendSlowly(client,textInputSelector, [..."1:00:00 AM", client.Keys.ENTER]);
-    client.expect.element(textInputSelector).value.to.equal("1:00:00 AM").before(1000);
+    sendSlowly(client, textInputSelector, [..."1:00:00 AM", client.Keys.ENTER]);
+    client.expect
+      .element(textInputSelector)
+      .value.to.equal("1:00:00 AM")
+      .before(1000);
     client.expect.element(hour5Selector).to.be.present.before(1000);
     client.click(hour5Selector);
-    client.expect.element(textInputSelector).value.to.equal("5:00:00 AM").before(1000);
+    client.expect
+      .element(textInputSelector)
+      .value.to.equal("5:00:00 AM")
+      .before(1000);
     client.expect.element(selectedHoursSelector).text.to.equal(5);
     client.expect.element(selectedMinutesSelector).text.to.equal(0);
     client.expect.element(selectedSecondsSelector).text.to.equal(0);
     client.end();
   },
 
-  'When selecting a time, and then typing a valid time, the typed time should appear in the text input': (client) => {
+  "When selecting a time, and then typing a valid time, the typed time should appear in the text input": client => {
     client.url(url);
-    
+
     client.expect.element(textInputSelector).to.be.present.before(1000);
     client.click(textInputSelector);
     client.expect.element(hour5Selector).to.be.present.before(1000);
     client.click(hour5Selector);
-    client.expect.element(textInputSelector).value.to.equal("5:00:00 PM").before(1000);
-    
+    client.expect
+      .element(textInputSelector)
+      .value.to.equal("5:00:00 PM")
+      .before(1000);
+
     client.click(textInputSelector);
     client.clearValue(textInputSelector);
     client.pause(100);
-    sendSlowly(client,textInputSelector, [..."1:00:00 AM", client.Keys.ENTER]);
-    
-    client.expect.element(textInputSelector).value.to.equal("1:00:00 AM").before(1000);
+    sendSlowly(client, textInputSelector, [..."1:00:00 AM", client.Keys.ENTER]);
+
+    client.expect
+      .element(textInputSelector)
+      .value.to.equal("1:00:00 AM")
+      .before(1000);
     client.expect.element(selectedHoursSelector).text.to.equal(1);
     client.expect.element(selectedMinutesSelector).text.to.equal(0);
     client.expect.element(selectedSecondsSelector).text.to.equal(0);
-    
+
     client.end();
   },
 
-  'When selecting a time, and then typing an invalid time, the selected time should appear in the text input': (client) => {
+  "When selecting a time, and then typing an invalid time, the selected time should appear in the text input": client => {
     client.url(url);
-    
+
     client.expect.element(textInputSelector).to.be.present.before(1000);
     client.click(textInputSelector);
     client.expect.element(hour5Selector).to.be.present.before(1000);
     client.click(hour5Selector);
 
-    const valid_time = "5:00:00 PM"
+    const valid_time = "5:00:00 PM";
 
-    client.expect.element(textInputSelector).value.to.equal(valid_time).before(1000);
+    client.expect
+      .element(textInputSelector)
+      .value.to.equal(valid_time)
+      .before(1000);
 
     client.click(textInputSelector);
     clearWithBackspace(client, textInputSelector, valid_time.length);
-    sendSlowly(client,textInputSelector, [..."27:00:00 AM", client.Keys.ENTER]);
-    
-    client.expect.element(textInputSelector).value.to.equal(valid_time).before(1000);
+    sendSlowly(client, textInputSelector, [
+      ..."27:00:00 AM",
+      client.Keys.ENTER
+    ]);
+
+    client.expect
+      .element(textInputSelector)
+      .value.to.equal(valid_time)
+      .before(1000);
     client.expect.element(selectedHoursSelector).text.to.equal(17);
     client.expect.element(selectedMinutesSelector).text.to.equal(0);
     client.expect.element(selectedSecondsSelector).text.to.equal(0);
-    
+
     client.end();
   },
 
@@ -193,5 +235,5 @@ module.exports = {
   ...testInvalidManualInput("12:60:00 PM"),
   ...testInvalidManualInput("12:-1:00 PM"),
   ...testInvalidManualInput("12:00:60 PM"),
-  ...testInvalidManualInput("12:00:-1 PM"),
+  ...testInvalidManualInput("12:00:-1 PM")
 };

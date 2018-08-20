@@ -3,12 +3,12 @@
 
 # make sure latest build is being run
 
-elm make --warn nightwatch-tests/SimpleNightwatch.elm --output=nightwatch-tests/simple-nightwatch.js
+cd nightwatch-tests && elm make SimpleNightwatch.elm --output=simple-nightwatch.js && cd ..
 
 
 # start some required background processes
 
-elm-reactor &
+elm reactor &
 ELM_REACTOR_PID=$!
 
 chromedriver &

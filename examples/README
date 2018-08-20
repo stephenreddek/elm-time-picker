@@ -1,4 +1,3 @@
-# Examples
-
 ## Running the examples
-Run `elm-reactor` in the root of the project (*not* in the examples folder) and navigate to `examples/index.html` in the browser
+In the examples folder, run `elm make src/Example.elm --output elm.js`
+In the root project folder, run `elm reactor` and then navigate to `examples/index.html` in the browser
