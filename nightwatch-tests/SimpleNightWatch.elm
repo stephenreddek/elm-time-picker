@@ -1,8 +1,9 @@
 module SimpleNightwatch exposing (main)
 
+import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import TimePicker exposing (TimePicker, TimeEvent(..))
+import TimePicker exposing (TimeEvent(..), TimePicker)
 
 
 type Msg
@@ -14,20 +15,20 @@ type alias Model =
     }
 
 
-init : ( Model, Cmd Msg )
+init : Model
 init =
-    ( Model (TimePicker.init Nothing), Cmd.none )
+    Model (TimePicker.init Nothing)
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> Model
 update msg model =
     case msg of
-        TimePickerMsg msg ->
+        TimePickerMsg m ->
             let
                 ( updatedPicker, timeEvent ) =
-                    TimePicker.update TimePicker.defaultSettings msg model.timePicker
+                    TimePicker.update TimePicker.defaultSettings m model.timePicker
             in
-                ( { model | timePicker = updatedPicker }, Cmd.none )
+            { model | timePicker = updatedPicker }
 
 
 view : Model -> Html Msg
@@ -38,19 +39,19 @@ view { timePicker } =
                 [ text "Time Picker with defaults" ]
             , h4 [ id "selected-hours" ]
                 [ TimePicker.selectedTime timePicker
-                    |> Maybe.map (toString << .hours)
+                    |> Maybe.map (.hours >> String.fromInt)
                     |> Maybe.withDefault ""
                     |> text
                 ]
             , h4 [ id "selected-minutes" ]
                 [ TimePicker.selectedTime timePicker
-                    |> Maybe.map (toString << .minutes)
+                    |> Maybe.map (.minutes >> String.fromInt)
                     |> Maybe.withDefault ""
                     |> text
                 ]
             , h4 [ id "selected-seconds" ]
                 [ TimePicker.selectedTime timePicker
-                    |> Maybe.map (toString << .seconds)
+                    |> Maybe.map (.seconds >> String.fromInt)
                     |> Maybe.withDefault ""
                     |> text
                 ]
@@ -60,11 +61,10 @@ view { timePicker } =
         ]
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    Html.program
+    Browser.sandbox
         { init = init
         , update = update
         , view = view
-        , subscriptions = always Sub.none
         }

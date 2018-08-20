@@ -30,7 +30,7 @@ steppingSettings =
         defaultSettings =
             TimePicker.defaultSettings
     in
-        { defaultSettings | showSeconds = False, minuteStep = 15, use24Hours = True }
+    { defaultSettings | showSeconds = False, minuteStep = 15, use24Hours = True }
 
 
 partiallyDisabledSettings : TimePicker.Settings
@@ -39,12 +39,12 @@ partiallyDisabledSettings =
         defaultSettings =
             TimePicker.defaultSettings
     in
-        { defaultSettings
-            | isHourDisabled = \value -> modBy 2 value == 0
-            , isMinuteDisabled = \value -> modBy 2 value == 0
-            , isSecondDisabled = \value -> modBy 2 value == 0
-            , isPeriodDisabled = (==) TimePicker.PM
-        }
+    { defaultSettings
+        | isHourDisabled = \value -> modBy 2 value == 0
+        , isMinuteDisabled = \value -> modBy 2 value == 0
+        , isSecondDisabled = \value -> modBy 2 value == 0
+        , isPeriodDisabled = (==) TimePicker.PM
+    }
 
 
 update : Msg -> Model -> Model
@@ -55,21 +55,21 @@ update msg model =
                 ( updatedPicker, timeEvent ) =
                     TimePicker.update TimePicker.defaultSettings m model.defaultTimePicker
             in
-                { model | defaultTimePicker = updatedPicker }
+            { model | defaultTimePicker = updatedPicker }
 
         SteppingTimePickerMsg m ->
             let
                 ( updatedPicker, timeEvent ) =
                     TimePicker.update steppingSettings m model.steppingTimePicker
             in
-                { model | steppingTimePicker = updatedPicker }
+            { model | steppingTimePicker = updatedPicker }
 
         PartiallyDisabledTimePickerMsg m ->
             let
                 ( updatedPicker, timeEvent ) =
                     TimePicker.update partiallyDisabledSettings m model.partiallyDisabledTimePicker
             in
-                { model | partiallyDisabledTimePicker = updatedPicker }
+            { model | partiallyDisabledTimePicker = updatedPicker }
 
 
 view : Model -> Html Msg
