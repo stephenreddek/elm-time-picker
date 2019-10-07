@@ -27,6 +27,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode
+import List.Extra exposing (dropWhile)
 import Regex
 
 
@@ -143,6 +144,10 @@ init initialValue =
         }
 
 
+
+--this needs updated to be the lcd of the disabled settings
+
+
 defaultTime : Time
 defaultTime =
     { hours = 0
@@ -173,7 +178,7 @@ update settings msg (TimePicker ({ value } as model)) =
                             Just { time | hours = hours }
 
                         Nothing ->
-                            Just (defaultPeriodIn12HourFormatForSelection settings { defaultTime | hours = hours })
+                            Just (defaultPeriodIn12HourFormatForSelection settings (setNewTimeWithChangedHours hours settings))
             in
             ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
@@ -185,6 +190,7 @@ update settings msg (TimePicker ({ value } as model)) =
                 updatedTime =
                     Just { timeToUpdate | minutes = minutes }
             in
+            --is hour selected? -- conform to lowest default hour, actually update the initial state
             ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
         SelectSecond seconds ->
@@ -241,6 +247,28 @@ update settings msg (TimePicker ({ value } as model)) =
                         Changed updatedValue
             in
             ( TimePicker { model | inputText = Nothing, value = updatedValue }, timeEvent )
+
+
+setNewTimeWithChangedHours : Int -> Settings -> Time
+setNewTimeWithChangedHours hours settings =
+    let
+        allMinutes =
+            List.range 0 59
+
+        possibleMinutes =
+            dropWhile settings.isMinuteDisabled allMinutes
+
+        allSeconds =
+            List.range 0 59
+
+        possibleSeconds =
+            dropWhile settings.isSecondDisabled allSeconds
+
+        -- settings.isHourDisabled on every element of List until I get a true
+    in
+    -- so I know the isHoursDisabled function gives me the lowest common denom of what will work
+    --{ hours = hours, minutes = 1, seconds = 1 }
+    { hours = hours, minutes = Maybe.withDefault 0 (List.head possibleMinutes), seconds = Maybe.withDefault 0 (List.head possibleSeconds) }
 
 
 setTimeWithPeriod : Period -> Time -> Time
@@ -495,6 +523,15 @@ view settings (TimePicker model) =
             model.value
                 |> Maybe.map (\_ -> [ a ([ class (cssPrefix ++ "panel-clear-btn"), href "#", onWithoutLosingFocus "mousedown" NoOp, onWithoutLosingFocus "mouseup" NoOp ] ++ optionalClear) [] ])
                 |> Maybe.withDefault []
+
+        -- defaultTime : Time
+        -- defaultTime =
+        --     { hours = 0
+        --     , minutes = 0
+        --     , seconds = 0
+        --     }
+        newDefaultTime =
+            { defaultTime | hours = 1, minutes = 1, seconds = 1 }
     in
     div [ classList [ ( cssPrefix ++ "container", True ), ( cssPrefix ++ "active", model.open ) ] ]
         [ div [ class (cssPrefix ++ "inner-container") ] <|
@@ -587,6 +624,7 @@ viewDropDown settings model =
             in
             dropdownOption (formatter value) isSelected (isDisabledValue value) (toMsg value)
 
+        steppingRange : Int -> Int -> Int -> List Int
         steppingRange step minVal maxVal =
             List.range minVal (maxVal // step)
                 |> List.map (\val -> val * step)
