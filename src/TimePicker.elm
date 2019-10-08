@@ -184,22 +184,25 @@ update settings msg (TimePicker ({ value } as model)) =
 
         SelectMinute minutes ->
             let
-                timeToUpdate =
-                    Maybe.withDefault defaultTime value
-
                 updatedTime =
-                    Just { timeToUpdate | minutes = minutes }
+                    case value of
+                        Just time ->
+                            Just { time | minutes = minutes }
+
+                        Nothing ->
+                            Just (setNewTimeWithChangedMinutes minutes settings)
             in
-            --is hour selected? -- conform to lowest default hour, actually update the initial state
             ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
         SelectSecond seconds ->
             let
-                timeToUpdate =
-                    Maybe.withDefault defaultTime value
-
                 updatedTime =
-                    Just { timeToUpdate | seconds = seconds }
+                    case value of
+                        Just time ->
+                            Just { time | seconds = seconds }
+
+                        Nothing ->
+                            Just (setNewTimeWithChangedSeconds seconds settings)
             in
             ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
@@ -269,6 +272,42 @@ setNewTimeWithChangedHours hours settings =
     -- so I know the isHoursDisabled function gives me the lowest common denom of what will work
     --{ hours = hours, minutes = 1, seconds = 1 }
     { hours = hours, minutes = Maybe.withDefault 0 (List.head possibleMinutes), seconds = Maybe.withDefault 0 (List.head possibleSeconds) }
+
+
+setNewTimeWithChangedMinutes : Int -> Settings -> Time
+setNewTimeWithChangedMinutes minutes settings =
+    let
+        allHours =
+            List.range 0 23
+
+        possibleHours =
+            dropWhile settings.isHourDisabled allHours
+
+        allSeconds =
+            List.range 0 59
+
+        possibleSeconds =
+            dropWhile settings.isSecondDisabled allSeconds
+    in
+    { hours = Maybe.withDefault 0 (List.head possibleHours), minutes = minutes, seconds = Maybe.withDefault 0 (List.head possibleSeconds) }
+
+
+setNewTimeWithChangedSeconds : Int -> Settings -> Time
+setNewTimeWithChangedSeconds seconds settings =
+    let
+        allHours =
+            List.range 0 23
+
+        possibleHours =
+            dropWhile settings.isHourDisabled allHours
+
+        allMinutes =
+            List.range 0 59
+
+        possibleMinutes =
+            dropWhile settings.isMinuteDisabled allMinutes
+    in
+    { hours = Maybe.withDefault 0 (List.head possibleHours), minutes = Maybe.withDefault 0 (List.head possibleMinutes), seconds = seconds }
 
 
 setTimeWithPeriod : Period -> Time -> Time
@@ -524,12 +563,6 @@ view settings (TimePicker model) =
                 |> Maybe.map (\_ -> [ a ([ class (cssPrefix ++ "panel-clear-btn"), href "#", onWithoutLosingFocus "mousedown" NoOp, onWithoutLosingFocus "mouseup" NoOp ] ++ optionalClear) [] ])
                 |> Maybe.withDefault []
 
-        -- defaultTime : Time
-        -- defaultTime =
-        --     { hours = 0
-        --     , minutes = 0
-        --     , seconds = 0
-        --     }
         newDefaultTime =
             { defaultTime | hours = 1, minutes = 1, seconds = 1 }
     in
@@ -624,7 +657,6 @@ viewDropDown settings model =
             in
             dropdownOption (formatter value) isSelected (isDisabledValue value) (toMsg value)
 
-        steppingRange : Int -> Int -> Int -> List Int
         steppingRange step minVal maxVal =
             List.range minVal (maxVal // step)
                 |> List.map (\val -> val * step)
