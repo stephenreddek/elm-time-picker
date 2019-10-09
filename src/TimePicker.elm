@@ -144,16 +144,24 @@ init initialValue =
         }
 
 
-
---this needs updated to be the lcd of the disabled settings
-
-
 defaultTime : Time
 defaultTime =
     { hours = 0
     , minutes = 0
     , seconds = 0
     }
+
+
+allHours =
+    List.range 0 23
+
+
+allMinutes =
+    List.range 0 59
+
+
+allSeconds =
+    List.range 0 59
 
 
 {-| Function to update the model when messages come
@@ -210,7 +218,7 @@ update settings msg (TimePicker ({ value } as model)) =
             let
                 updatedTime =
                     value
-                        |> Maybe.withDefault defaultTime
+                        |> Maybe.withDefault (setNewTimeWithChangedPeriod settings)
                         |> setTimeWithPeriod period
                         |> Just
             in
@@ -255,36 +263,26 @@ update settings msg (TimePicker ({ value } as model)) =
 setNewTimeWithChangedHours : Int -> Settings -> Time
 setNewTimeWithChangedHours hours settings =
     let
-        allMinutes =
-            List.range 0 59
-
         possibleMinutes =
             dropWhile settings.isMinuteDisabled allMinutes
-
-        allSeconds =
-            List.range 0 59
 
         possibleSeconds =
             dropWhile settings.isSecondDisabled allSeconds
 
-        -- settings.isHourDisabled on every element of List until I get a true
+        allPeriods =
+            [ PM, AM ]
+
+        possiblePeriods =
+            dropWhile settings.isPeriodDisabled allPeriods
     in
-    -- so I know the isHoursDisabled function gives me the lowest common denom of what will work
-    --{ hours = hours, minutes = 1, seconds = 1 }
     { hours = hours, minutes = Maybe.withDefault 0 (List.head possibleMinutes), seconds = Maybe.withDefault 0 (List.head possibleSeconds) }
 
 
 setNewTimeWithChangedMinutes : Int -> Settings -> Time
 setNewTimeWithChangedMinutes minutes settings =
     let
-        allHours =
-            List.range 0 23
-
         possibleHours =
             dropWhile settings.isHourDisabled allHours
-
-        allSeconds =
-            List.range 0 59
 
         possibleSeconds =
             dropWhile settings.isSecondDisabled allSeconds
@@ -295,19 +293,28 @@ setNewTimeWithChangedMinutes minutes settings =
 setNewTimeWithChangedSeconds : Int -> Settings -> Time
 setNewTimeWithChangedSeconds seconds settings =
     let
-        allHours =
-            List.range 0 23
-
         possibleHours =
             dropWhile settings.isHourDisabled allHours
-
-        allMinutes =
-            List.range 0 59
 
         possibleMinutes =
             dropWhile settings.isMinuteDisabled allMinutes
     in
     { hours = Maybe.withDefault 0 (List.head possibleHours), minutes = Maybe.withDefault 0 (List.head possibleMinutes), seconds = seconds }
+
+
+setNewTimeWithChangedPeriod : Settings -> Time
+setNewTimeWithChangedPeriod settings =
+    let
+        possibleHours =
+            dropWhile settings.isHourDisabled allHours
+
+        possibleMinutes =
+            dropWhile settings.isMinuteDisabled allMinutes
+
+        possibleSeconds =
+            dropWhile settings.isSecondDisabled allSeconds
+    in
+    { hours = Maybe.withDefault 0 (List.head possibleHours), minutes = Maybe.withDefault 0 (List.head possibleMinutes), seconds = Maybe.withDefault 0 (List.head possibleSeconds) }
 
 
 setTimeWithPeriod : Period -> Time -> Time
@@ -345,7 +352,7 @@ defaultPeriodIn12HourFormatForSelection settings time =
     if settings.use24Hours then
         time
 
-    else if time.hours >= 0 && time.hours <= 6 then
+    else if time.hours >= 0 && time.hours <= 6 && not (settings.isPeriodDisabled PM) then
         { time | hours = time.hours + 12 }
 
     else
