@@ -569,9 +569,6 @@ view settings (TimePicker model) =
             model.value
                 |> Maybe.map (\_ -> [ a ([ class (cssPrefix ++ "panel-clear-btn"), href "#", onWithoutLosingFocus "mousedown" NoOp, onWithoutLosingFocus "mouseup" NoOp ] ++ optionalClear) [] ])
                 |> Maybe.withDefault []
-
-        newDefaultTime =
-            { defaultTime | hours = 1, minutes = 1, seconds = 1 }
     in
     div [ classList [ ( cssPrefix ++ "container", True ), ( cssPrefix ++ "active", model.open ) ] ]
         [ div [ class (cssPrefix ++ "inner-container") ] <|
