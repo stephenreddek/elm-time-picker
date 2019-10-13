@@ -27,7 +27,6 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode
-import List.Extra exposing (find)
 import Regex
 
 
@@ -276,6 +275,25 @@ defaultMinute settings =
 defaultSecond : Settings -> Int
 defaultSecond settings =
     Maybe.withDefault 0 (find (settings.isSecondDisabled >> not) allSeconds)
+
+
+{-| Find the first element that satisfies a predicate and return
+Just that element. If none match, return Nothing.
+find (\\num -> num > 5) [2, 4, 6, 8] == Just 6
+<https://github.com/circuithub/elm-list-extra/blob/3.7.1/src/List/Extra.elm>
+-}
+find : (a -> Bool) -> List a -> Maybe a
+find predicate list =
+    case list of
+        [] ->
+            Nothing
+
+        first :: rest ->
+            if predicate first then
+                Just first
+
+            else
+                find predicate rest
 
 
 setTimeWithPeriod : Period -> Time -> Time
