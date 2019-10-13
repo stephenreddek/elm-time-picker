@@ -27,7 +27,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode
-import List.Extra exposing (dropWhile)
+import List.Extra exposing (find)
 import Regex
 
 
@@ -152,14 +152,17 @@ defaultTime =
     }
 
 
+allHours : List Int
 allHours =
     List.range 0 23
 
 
+allMinutes : List Int
 allMinutes =
     List.range 0 59
 
 
+allSeconds : List Int
 allSeconds =
     List.range 0 59
 
@@ -186,7 +189,7 @@ update settings msg (TimePicker ({ value } as model)) =
                             Just { time | hours = hours }
 
                         Nothing ->
-                            Just (defaultPeriodIn12HourFormatForSelection settings (setNewTimeWithChangedHours hours settings))
+                            Just (defaultPeriodIn12HourFormatForSelection settings { hours = hours, minutes = defaultMinute settings, seconds = defaultSecond settings })
             in
             ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
@@ -198,7 +201,7 @@ update settings msg (TimePicker ({ value } as model)) =
                             Just { time | minutes = minutes }
 
                         Nothing ->
-                            Just (setNewTimeWithChangedMinutes minutes settings)
+                            Just { hours = defaultHour settings, minutes = minutes, seconds = defaultSecond settings }
             in
             ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
@@ -210,7 +213,7 @@ update settings msg (TimePicker ({ value } as model)) =
                             Just { time | seconds = seconds }
 
                         Nothing ->
-                            Just (setNewTimeWithChangedSeconds seconds settings)
+                            Just { hours = defaultHour settings, minutes = defaultMinute settings, seconds = seconds }
             in
             ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
@@ -218,7 +221,7 @@ update settings msg (TimePicker ({ value } as model)) =
             let
                 updatedTime =
                     value
-                        |> Maybe.withDefault (setNewTimeWithChangedPeriod settings)
+                        |> Maybe.withDefault { hours = defaultHour settings, minutes = defaultMinute settings, seconds = defaultSecond settings }
                         |> setTimeWithPeriod period
                         |> Just
             in
@@ -260,61 +263,19 @@ update settings msg (TimePicker ({ value } as model)) =
             ( TimePicker { model | inputText = Nothing, value = updatedValue }, timeEvent )
 
 
-setNewTimeWithChangedHours : Int -> Settings -> Time
-setNewTimeWithChangedHours hours settings =
-    let
-        possibleMinutes =
-            dropWhile settings.isMinuteDisabled allMinutes
-
-        possibleSeconds =
-            dropWhile settings.isSecondDisabled allSeconds
-
-        allPeriods =
-            [ PM, AM ]
-
-        possiblePeriods =
-            dropWhile settings.isPeriodDisabled allPeriods
-    in
-    { hours = hours, minutes = Maybe.withDefault 0 (List.head possibleMinutes), seconds = Maybe.withDefault 0 (List.head possibleSeconds) }
+defaultHour : Settings -> Int
+defaultHour settings =
+    Maybe.withDefault 0 (find (settings.isHourDisabled >> not) allHours)
 
 
-setNewTimeWithChangedMinutes : Int -> Settings -> Time
-setNewTimeWithChangedMinutes minutes settings =
-    let
-        possibleHours =
-            dropWhile settings.isHourDisabled allHours
-
-        possibleSeconds =
-            dropWhile settings.isSecondDisabled allSeconds
-    in
-    { hours = Maybe.withDefault 0 (List.head possibleHours), minutes = minutes, seconds = Maybe.withDefault 0 (List.head possibleSeconds) }
+defaultMinute : Settings -> Int
+defaultMinute settings =
+    Maybe.withDefault 0 (find (settings.isMinuteDisabled >> not) allMinutes)
 
 
-setNewTimeWithChangedSeconds : Int -> Settings -> Time
-setNewTimeWithChangedSeconds seconds settings =
-    let
-        possibleHours =
-            dropWhile settings.isHourDisabled allHours
-
-        possibleMinutes =
-            dropWhile settings.isMinuteDisabled allMinutes
-    in
-    { hours = Maybe.withDefault 0 (List.head possibleHours), minutes = Maybe.withDefault 0 (List.head possibleMinutes), seconds = seconds }
-
-
-setNewTimeWithChangedPeriod : Settings -> Time
-setNewTimeWithChangedPeriod settings =
-    let
-        possibleHours =
-            dropWhile settings.isHourDisabled allHours
-
-        possibleMinutes =
-            dropWhile settings.isMinuteDisabled allMinutes
-
-        possibleSeconds =
-            dropWhile settings.isSecondDisabled allSeconds
-    in
-    { hours = Maybe.withDefault 0 (List.head possibleHours), minutes = Maybe.withDefault 0 (List.head possibleMinutes), seconds = Maybe.withDefault 0 (List.head possibleSeconds) }
+defaultSecond : Settings -> Int
+defaultSecond settings =
+    Maybe.withDefault 0 (find (settings.isSecondDisabled >> not) allSeconds)
 
 
 setTimeWithPeriod : Period -> Time -> Time
