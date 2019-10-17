@@ -143,14 +143,6 @@ init initialValue =
         }
 
 
-defaultTime : Time
-defaultTime =
-    { hours = 0
-    , minutes = 0
-    , seconds = 0
-    }
-
-
 allHours : List Int
 allHours =
     List.range 0 23
@@ -279,8 +271,9 @@ defaultSecond settings =
 
 {-| Find the first element that satisfies a predicate and return
 Just that element. If none match, return Nothing.
-find (\\num -> num > 5) [2, 4, 6, 8] == Just 6
-<https://github.com/circuithub/elm-list-extra/blob/3.7.1/src/List/Extra.elm>
+find (\\num -> num > 5) [ 2, 4, 6, 8 ]
+--> Just 6
+This function was copied from: <https://github.com/elm-community/list-extra>
 -}
 find : (a -> Bool) -> List a -> Maybe a
 find predicate list =
@@ -425,7 +418,11 @@ parseTimeParts settings period timeParts =
 
     else
         List.map2 (\a b -> ( a, b )) timeParts allSetters
-            |> List.foldl (\( val, setter ) timeAcc -> setter val timeAcc) defaultTime
+            |> List.foldl (\( val, setter ) timeAcc -> setter val timeAcc)
+                { hours = 0
+                , minutes = 0
+                , seconds = 0
+                }
             |> withPeriod
             |> Just
             |> Ok
