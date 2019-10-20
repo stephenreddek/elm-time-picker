@@ -143,21 +143,6 @@ init initialValue =
         }
 
 
-allHours : List Int
-allHours =
-    List.range 0 23
-
-
-allMinutes : List Int
-allMinutes =
-    List.range 0 59
-
-
-allSeconds : List Int
-allSeconds =
-    List.range 0 59
-
-
 {-| Function to update the model when messages come
 -}
 update : Settings -> Msg -> TimePicker -> ( TimePicker, TimeEvent )
@@ -256,17 +241,31 @@ update settings msg (TimePicker ({ value } as model)) =
 
 defaultHour : Settings -> Int
 defaultHour settings =
-    Maybe.withDefault 0 (find (settings.isHourDisabled >> not) allHours)
+    Maybe.withDefault 0 (find (settings.isHourDisabled >> not) (steppedTimeUnits settings.hourStep 1 23))
 
 
 defaultMinute : Settings -> Int
 defaultMinute settings =
-    Maybe.withDefault 0 (find (settings.isMinuteDisabled >> not) allMinutes)
+    Maybe.withDefault 0 (find (settings.isMinuteDisabled >> not) (steppedTimeUnits settings.minuteStep 1 59))
 
 
 defaultSecond : Settings -> Int
 defaultSecond settings =
-    Maybe.withDefault 0 (find (settings.isSecondDisabled >> not) allSeconds)
+    Maybe.withDefault 0 (find (settings.isSecondDisabled >> not) (steppedTimeUnits settings.secondStep 1 59))
+
+
+steppedTimeUnits : Int -> Int -> Int -> List Int
+steppedTimeUnits step head tail =
+    let
+        allTimeUnits =
+            List.range head tail
+    in
+    0 :: List.filter (divisibleByStep step) allTimeUnits
+
+
+divisibleByStep : Int -> Int -> Bool
+divisibleByStep step timeUnit =
+    modBy step timeUnit == 0
 
 
 {-| Find the first element that satisfies a predicate and return
@@ -274,6 +273,7 @@ Just that element. If none match, return Nothing.
 find (\\num -> num > 5) [ 2, 4, 6, 8 ]
 --> Just 6
 This function was copied from: <https://github.com/elm-community/list-extra>
+Copyright (c) 2016 CircuitHub Inc., Elm Community members
 -}
 find : (a -> Bool) -> List a -> Maybe a
 find predicate list =
