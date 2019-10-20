@@ -2,6 +2,7 @@ module TimePicker exposing
     ( Time, TimePicker, Settings, Period(..), defaultSettings, selectedTime
     , init, Msg, TimeEvent(..), update
     , view
+    , divisibleByStep
     )
 
 {-| A time picker in pure elm.
