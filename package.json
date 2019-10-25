@@ -1,24 +1,27 @@
 {
-    "name": "elm-time-picker",
-    "version": "1.0.1",
-    "description": "``` shell elm package install stephenreddek/elm-time-picker ```",
-    "main": "index.js",
-    "directories": {},
-    "scripts": {
-      "test": "sh ./run-acceptance-tests",
-      "start": "elm-reactor"
-    },
-    "repository": {
-      "type": "git",
-      "url": "git+https://github.com/stephenreddek/elm-time-picker.git"
-    },
-    "author": "",
-    "license": "BSD3",
-    "bugs": {
-      "url": "https://github.com/stephenreddek/elm-time-picker/issues"
-    },
-    "homepage": "https://github.com/stephenreddek/elm-time-picker#readme",
-    "devDependencies": {
-      "nightwatch": "0.9.16"
-    }
+  "name": "elm-time-picker",
+  "version": "1.0.1",
+  "description": "``` shell elm package install stephenreddek/elm-time-picker ```",
+  "main": "index.js",
+  "directories": {},
+  "scripts": {
+    "test": "sh ./run-acceptance-tests",
+    "start": "cd examples && elm-live src/Example.elm --open --start-page=index.html -- --output=elm.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stephenreddek/elm-time-picker.git"
+  },
+  "author": "",
+  "license": "BSD3",
+  "bugs": {
+    "url": "https://github.com/stephenreddek/elm-time-picker/issues"
+  },
+  "homepage": "https://github.com/stephenreddek/elm-time-picker#readme",
+  "devDependencies": {
+    "nightwatch": "0.9.16"
+  },
+  "dependencies": {
+    "elm-live": "^4.0.1"
   }
+}

@@ -1,4 +1,4 @@
-module Examples exposing (main)
+module Example exposing (main)
 
 import Browser
 import Html exposing (..)

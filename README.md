@@ -34,6 +34,7 @@ timePickerSettings =
 ```
 
 Handle messages to the picker in your update function. The TimePicker's update function also communicates when the value of the time picker has changed.
+
 ```elm
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg { timePicker } =
@@ -55,11 +56,13 @@ update msg { timePicker } =
 ```
 
 To render the time picker, call the view function
+
 ```elm
 Html.map TimePickerMsg <| TimePicker.view timePicker
 ```
 
 Access the selected time at any time by using the `selectedTime` function.
+
 ```elm
 time =
     TimePicker.selectedTime model.timePicker
@@ -71,4 +74,4 @@ Checkout the [example](https://github.com/stephenreddek/elm-time-picker/tree/mas
 
 ## Css
 
-An example style for the time picker can be found [in the project repo](https://github.com/stephenreddek/elm-time-picker/tree/master/css "elm-time-picker Github"). You can use the styles provided or create your own.
+An example style for the time picker can be found [in the project repo](https://github.com/stephenreddek/elm-time-picker/tree/master/examples/css "elm-time-picker Github"). You can use the styles provided or create your own.
