@@ -143,14 +143,6 @@ init initialValue =
         }
 
 
-defaultTime : Time
-defaultTime =
-    { hours = 0
-    , minutes = 0
-    , seconds = 0
-    }
-
-
 {-| Function to update the model when messages come
 -}
 update : Settings -> Msg -> TimePicker -> ( TimePicker, TimeEvent )
@@ -173,27 +165,31 @@ update settings msg (TimePicker ({ value } as model)) =
                             Just { time | hours = hours }
 
                         Nothing ->
-                            Just (defaultPeriodIn12HourFormatForSelection settings { defaultTime | hours = hours })
+                            Just (defaultPeriodIn12HourFormatForSelection settings { hours = hours, minutes = defaultMinute settings, seconds = defaultSecond settings })
             in
             ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
         SelectMinute minutes ->
             let
-                timeToUpdate =
-                    Maybe.withDefault defaultTime value
-
                 updatedTime =
-                    Just { timeToUpdate | minutes = minutes }
+                    case value of
+                        Just time ->
+                            Just { time | minutes = minutes }
+
+                        Nothing ->
+                            Just { hours = defaultHour settings, minutes = minutes, seconds = defaultSecond settings }
             in
             ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
         SelectSecond seconds ->
             let
-                timeToUpdate =
-                    Maybe.withDefault defaultTime value
-
                 updatedTime =
-                    Just { timeToUpdate | seconds = seconds }
+                    case value of
+                        Just time ->
+                            Just { time | seconds = seconds }
+
+                        Nothing ->
+                            Just { hours = defaultHour settings, minutes = defaultMinute settings, seconds = seconds }
             in
             ( TimePicker { model | value = updatedTime, inputText = Nothing }, Changed updatedTime )
 
@@ -201,7 +197,7 @@ update settings msg (TimePicker ({ value } as model)) =
             let
                 updatedTime =
                     value
-                        |> Maybe.withDefault defaultTime
+                        |> Maybe.withDefault { hours = defaultHour settings, minutes = defaultMinute settings, seconds = defaultSecond settings }
                         |> setTimeWithPeriod period
                         |> Just
             in
@@ -243,6 +239,56 @@ update settings msg (TimePicker ({ value } as model)) =
             ( TimePicker { model | inputText = Nothing, value = updatedValue }, timeEvent )
 
 
+defaultHour : Settings -> Int
+defaultHour settings =
+    Maybe.withDefault 0 (find (settings.isHourDisabled >> not) (steppedTimeUnits settings.hourStep 1 23))
+
+
+defaultMinute : Settings -> Int
+defaultMinute settings =
+    Maybe.withDefault 0 (find (settings.isMinuteDisabled >> not) (steppedTimeUnits settings.minuteStep 1 59))
+
+
+defaultSecond : Settings -> Int
+defaultSecond settings =
+    Maybe.withDefault 0 (find (settings.isSecondDisabled >> not) (steppedTimeUnits settings.secondStep 1 59))
+
+
+steppedTimeUnits : Int -> Int -> Int -> List Int
+steppedTimeUnits step head tail =
+    let
+        allTimeUnits =
+            List.range head tail
+    in
+    0 :: List.filter (divisibleByStep step) allTimeUnits
+
+
+divisibleByStep : Int -> Int -> Bool
+divisibleByStep step timeUnit =
+    modBy step timeUnit == 0
+
+
+{-| Find the first element that satisfies a predicate and return
+Just that element. If none match, return Nothing.
+find (\\num -> num > 5) [ 2, 4, 6, 8 ]
+--> Just 6
+This function was copied from: <https://github.com/elm-community/list-extra>
+Copyright (c) 2016 CircuitHub Inc., Elm Community members
+-}
+find : (a -> Bool) -> List a -> Maybe a
+find predicate list =
+    case list of
+        [] ->
+            Nothing
+
+        first :: rest ->
+            if predicate first then
+                Just first
+
+            else
+                find predicate rest
+
+
 setTimeWithPeriod : Period -> Time -> Time
 setTimeWithPeriod period time =
     case period of
@@ -278,7 +324,7 @@ defaultPeriodIn12HourFormatForSelection settings time =
     if settings.use24Hours then
         time
 
-    else if time.hours >= 0 && time.hours <= 6 then
+    else if time.hours >= 0 && time.hours <= 6 && not (settings.isPeriodDisabled PM) then
         { time | hours = time.hours + 12 }
 
     else
@@ -372,7 +418,11 @@ parseTimeParts settings period timeParts =
 
     else
         List.map2 (\a b -> ( a, b )) timeParts allSetters
-            |> List.foldl (\( val, setter ) timeAcc -> setter val timeAcc) defaultTime
+            |> List.foldl (\( val, setter ) timeAcc -> setter val timeAcc)
+                { hours = 0
+                , minutes = 0
+                , seconds = 0
+                }
             |> withPeriod
             |> Just
             |> Ok
