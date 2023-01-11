@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/stephenreddek/elm-time-picker#readme",
   "devDependencies": {
-    "nightwatch": "0.9.16"
+    "nightwatch": "2.6.9"
   },
   "dependencies": {
     "elm-live": "^4.0.1"
